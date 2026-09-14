@@ -101,6 +101,19 @@ Two traps already hit:
   readings are labelled "so far today".
 - A reading needs at least 3 watched rides open. Fewer than that is a rumour, not a level.
 
+## Best time to ride
+- `ParkEntity.bestTimeAhead()` reads Disney's hourly `forecast` array. It is deliberately
+  conservative: it stays silent below a 10-minute saving, when the current standby is
+  already lower than anything forecast, and when fewer than two forecast hours remain.
+  Bad advice is worse than no advice when someone is standing in front of the ride.
+- The comparison is against **what is posted now**, not against the rest of the forecast.
+  The question being answered is "queue now or come back?", not "when is the daily trough?".
+- **Universal has no forecast at all**, so those ride rows are not expandable — no chevron,
+  no tap target. Verified on IOA.
+- In practice the quietest hour is very often the park's last operating hour, because
+  queues taper at close. That is real, not a bug, but it does mean the advice reads
+  similarly across many rides on the same evening.
+
 ## Conventions
 - Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
 - Expressive opt-ins are set once in `app/build.gradle.kts`, not per call site.

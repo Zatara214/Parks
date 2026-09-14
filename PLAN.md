@@ -59,9 +59,12 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 **Phase 1 complete.**
 
 ### Phase 2 — depth
+- [x] **"Best time to ride today"** — tapping a Disney ride expands an hourly forecast bar
+      chart with the quietest hour still ahead called out. Universal sends no forecast, so
+      those rows are not expandable at all rather than opening an empty chart.
+      Advice is withheld below a 10-minute saving, and when the queue is already shorter
+      than anything forecast.
 - [ ] Wait-time history chart per ride, from the samples already being recorded.
-- [ ] Disney's hourly `forecast` array as a "best time to ride today" hint (Disney-only —
-      Universal sends no forecast).
 - [ ] Lightning Lane pricing and availability from the schedule `purchases` array.
 - [ ] Hand-off to the official apps: deep-link to Disney Parks / Universal FL for anything
       that needs a real account — mobile order, ticket scanning, virtual queues. Manifest

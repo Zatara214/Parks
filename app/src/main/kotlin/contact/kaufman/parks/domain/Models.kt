@@ -35,6 +35,19 @@ sealed interface Queue {
 
 data class Showtime(val type: String?, val start: Instant?, val end: Instant?)
 
+/**
+ * One hour of Disney's own posted-wait forecast.
+ *
+ * **Disney only.** Universal's `/live` carries no forecast array at all, so anything built
+ * on this has to degrade gracefully at USF, IOA and Epic Universe rather than look broken.
+ */
+data class ForecastPoint(
+    val time: Instant,
+    val waitMinutes: Int?,
+    /** Disney's own percentile for this hour, where 100 is the ride's worst. */
+    val percentage: Int?,
+)
+
 data class ParkEntity(
     val id: String,
     val name: String,
@@ -43,6 +56,7 @@ data class ParkEntity(
     val status: OperatingStatus,
     val queues: List<Queue> = emptyList(),
     val showtimes: List<Showtime> = emptyList(),
+    val forecast: List<ForecastPoint> = emptyList(),
     val latitude: Double? = null,
     val longitude: Double? = null,
     val lastUpdated: Instant? = null,
@@ -51,6 +65,25 @@ data class ParkEntity(
         get() = queues.filterIsInstance<Queue.Standby>().firstOrNull()?.waitMinutes
 
     val isOperating: Boolean get() = status == OperatingStatus.OPERATING
+
+    /**
+     * The quietest hour still ahead of you today, or null when there is nothing useful to
+     * say — no forecast (every Universal ride), nothing left today, or a flat curve where
+     * waiting buys you nothing.
+     *
+     * [minimumSavingMinutes] exists so the app stays quiet rather than advising someone to
+     * walk away and come back for the sake of five minutes.
+     */
+    fun bestTimeAhead(now: Instant, minimumSavingMinutes: Int = 10): ForecastPoint? {
+        val ahead = forecast.filter { it.time > now && it.waitMinutes != null }
+        if (ahead.size < 2) return null
+        val best = ahead.minByOrNull { it.waitMinutes!! } ?: return null
+        // Compare against what it is posting now, not against the rest of the forecast:
+        // the question is whether to queue up now, and a standby number that is already
+        // lower than anything forecast should not be talked out of.
+        val current = standbyMinutes ?: ahead.first().waitMinutes ?: return null
+        return best.takeIf { current - it.waitMinutes!! >= minimumSavingMinutes }
+    }
 }
 
 /** One row of a park's calendar — regular hours, Early Entry, or a hard-ticket night. */

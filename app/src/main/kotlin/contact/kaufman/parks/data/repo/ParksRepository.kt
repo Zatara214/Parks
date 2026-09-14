@@ -8,6 +8,7 @@ import contact.kaufman.parks.data.api.ThemeParksApi
 import contact.kaufman.parks.data.api.WeatherApi
 import contact.kaufman.parks.data.crowd.CrowdBaselines
 import contact.kaufman.parks.domain.EntityKind
+import contact.kaufman.parks.domain.ForecastPoint
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkEntity
@@ -223,6 +224,10 @@ private fun LiveEntityDto.toParkEntity(park: Park, child: ChildEntityDto?): Park
         },
         queues = queues,
         showtimes = showtimes.map { Showtime(it.type, it.startTime.toInstantOrNull(), it.endTime.toInstantOrNull()) },
+        forecast = forecast.mapNotNull { point ->
+            val at = point.time.toInstantOrNull() ?: return@mapNotNull null
+            ForecastPoint(time = at, waitMinutes = point.waitTime, percentage = point.percentage)
+        },
         latitude = child?.location?.latitude,
         longitude = child?.location?.longitude,
         lastUpdated = lastUpdated.toInstantOrNull(),
