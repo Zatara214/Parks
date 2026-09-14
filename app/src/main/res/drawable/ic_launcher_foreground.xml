@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A ferris wheel: reads at launcher size and belongs to no one park. -->
+    <group android:translateX="0" android:translateY="-2">
+        <path
+            android:strokeColor="#FFD166"
+            android:strokeWidth="3.2"
+            android:strokeLineCap="round"
+            android:pathData="M54,34m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
+        <path
+            android:fillColor="#FFD166"
+            android:pathData="M54,30a4,4 0,1 1,0,8a4,4 0,1 1,0,-8z" />
+        <path
+            android:strokeColor="#FFD166"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:pathData="M54,34 L54,14 M54,34 L71.3,44 M54,34 L36.7,44 M54,34 L71.3,24 M54,34 L36.7,24 M54,34 L54,54" />
+        <path
+            android:fillColor="#F4978E"
+            android:pathData="M50,10h8v6h-8z M67.3,40h8v6h-8z M32.7,40h8v6h-8z M67.3,20h8v6h-8z M32.7,20h8v6h-8z M50,50h8v6h-8z" />
+        <path
+            android:strokeColor="#FFD166"
+            android:strokeWidth="3.2"
+            android:strokeLineCap="round"
+            android:pathData="M42,50 L34,80 M66,50 L74,80" />
+        <path
+            android:strokeColor="#FFD166"
+            android:strokeWidth="3.2"
+            android:strokeLineCap="round"
+            android:pathData="M30,82 L78,82" />
+    </group>
+</vector>

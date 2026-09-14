@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+/build/
+/*/build/
+.kotlin/
+
+# Local config
+local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# IDE / tool state
+.idea/
+*.iml
+/captures
+.externalNativeBuild
+.cxx
+.artifacts/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store

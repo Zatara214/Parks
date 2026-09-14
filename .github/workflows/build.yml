@@ -1,0 +1,76 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-37.2 build-tools;37.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Derive version from tag
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            NAME="${GITHUB_REF#refs/tags/v}"
+          else
+            NAME="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          IFS='.-' read -r MAJ MIN PAT _ <<< "$NAME"
+          CODE=$(( MAJ * 10000 + MIN * 100 + PAT ))
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "version $NAME ($CODE)"
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Build debug
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          PARKS_VERSION_NAME: ${{ steps.ver.outputs.name }}
+          PARKS_VERSION_CODE: ${{ steps.ver.outputs.code }}
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Decode signing key
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          PARKS_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          PARKS_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PARKS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PARKS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          PARKS_VERSION_NAME: ${{ steps.ver.outputs.name }}
+          PARKS_VERSION_CODE: ${{ steps.ver.outputs.code }}
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "parks-${{ steps.ver.outputs.name }}.apk"
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: parks-${{ steps.ver.outputs.name }}.apk
+          generate_release_notes: true

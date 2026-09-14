@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Compose owns the real theming; these exist so the window background and the
+         splash screen match before the first frame is composed. -->
+    <style name="Theme.Parks" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <style name="Theme.Parks.Splash" parent="Theme.Parks">
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/window_background</item>
+    </style>
+</resources>

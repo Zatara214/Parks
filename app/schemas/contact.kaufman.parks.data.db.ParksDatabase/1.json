@@ -1,0 +1,247 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "3ef6e3d5d6603cdd235452b75b4f8275",
+    "entities": [
+      {
+        "tableName": "wait_samples",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `attractionId` TEXT NOT NULL, `parkId` TEXT NOT NULL, `observedAtEpochSeconds` INTEGER NOT NULL, `parkDate` TEXT NOT NULL, `waitMinutes` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attractionId",
+            "columnName": "attractionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkId",
+            "columnName": "parkId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observedAtEpochSeconds",
+            "columnName": "observedAtEpochSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkDate",
+            "columnName": "parkDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "waitMinutes",
+            "columnName": "waitMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_wait_samples_attractionId_observedAtEpochSeconds",
+            "unique": false,
+            "columnNames": [
+              "attractionId",
+              "observedAtEpochSeconds"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wait_samples_attractionId_observedAtEpochSeconds` ON `${TABLE_NAME}` (`attractionId`, `observedAtEpochSeconds`)"
+          }
+        ]
+      },
+      {
+        "tableName": "daily_wait_averages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`attractionId` TEXT NOT NULL, `parkId` TEXT NOT NULL, `parkDate` TEXT NOT NULL, `averageMinutes` REAL NOT NULL, `sampleCount` INTEGER NOT NULL, `dayOfWeek` INTEGER NOT NULL, `month` INTEGER NOT NULL, PRIMARY KEY(`attractionId`, `parkDate`))",
+        "fields": [
+          {
+            "fieldPath": "attractionId",
+            "columnName": "attractionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkId",
+            "columnName": "parkId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkDate",
+            "columnName": "parkDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "averageMinutes",
+            "columnName": "averageMinutes",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampleCount",
+            "columnName": "sampleCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayOfWeek",
+            "columnName": "dayOfWeek",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "month",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "attractionId",
+            "parkDate"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_daily_wait_averages_parkId_parkDate",
+            "unique": false,
+            "columnNames": [
+              "parkId",
+              "parkDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_wait_averages_parkId_parkDate` ON `${TABLE_NAME}` (`parkId`, `parkDate`)"
+          }
+        ]
+      },
+      {
+        "tableName": "park_crowd_history",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`parkId` TEXT NOT NULL, `parkDate` TEXT NOT NULL, `level` REAL NOT NULL, `ratio` REAL NOT NULL, `confidence` REAL NOT NULL, PRIMARY KEY(`parkId`, `parkDate`))",
+        "fields": [
+          {
+            "fieldPath": "parkId",
+            "columnName": "parkId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkDate",
+            "columnName": "parkDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "level",
+            "columnName": "level",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ratio",
+            "columnName": "ratio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "parkId",
+            "parkDate"
+          ]
+        }
+      },
+      {
+        "tableName": "parking_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `parkId` TEXT NOT NULL, `parkedAtEpochSeconds` INTEGER NOT NULL, `lot` TEXT NOT NULL, `row` TEXT NOT NULL, `note` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `isActive` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkId",
+            "columnName": "parkId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parkedAtEpochSeconds",
+            "columnName": "parkedAtEpochSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lot",
+            "columnName": "lot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "row",
+            "columnName": "row",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3ef6e3d5d6603cdd235452b75b4f8275')"
+    ]
+  }
+}
