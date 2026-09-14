@@ -13,6 +13,7 @@ import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
+import contact.kaufman.parks.domain.Resort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -89,6 +90,11 @@ class DashboardViewModel @Inject constructor(
             // two look identical from the UI.
             Log.d(TAG, "fix ${fix.latitude},${fix.longitude} (${fix.provider}) -> ${park?.displayName ?: "no park"}")
             _state.value = _state.value.copy(youAreHere = park)
+            // The header should report the weather where you actually are. Standing at
+            // Islands of Adventure while it reads Walt Disney World is just wrong.
+            if (park != null && park.resort != Resort.WALT_DISNEY_WORLD) {
+                loadResortWeather(park.resort)
+            }
         }
     }
 
@@ -97,9 +103,9 @@ class DashboardViewModel @Inject constructor(
      * served from the repository's 15-minute cache — deliberately not a live feed, since
      * Zak has a dedicated weather app for that.
      */
-    private fun loadResortWeather() {
+    private fun loadResortWeather(resort: Resort = Resort.WALT_DISNEY_WORLD) {
         viewModelScope.launch {
-            val weather = parks.resortWeather() ?: return@launch
+            val weather = parks.resortWeather(resort) ?: return@launch
             _state.value = _state.value.copy(resortWeather = weather)
         }
     }

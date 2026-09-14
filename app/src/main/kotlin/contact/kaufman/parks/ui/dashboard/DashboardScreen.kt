@@ -130,21 +130,24 @@ private fun ParkList(
             ParkingPin(parking, onParkingClick, Modifier.animateItem())
         }
 
-        byResort.forEach { (resort, parks) ->
-            item(key = "header-${resort.name}") {
+        // Ordering lives in dashboardSections() so the "don't list it twice" rule can be
+        // tested; the card keeps its list key, so it animates up rather than blinking into
+        // place when the fix lands.
+        dashboardSections(snapshots, youAreHere).forEach { section ->
+            item(key = "header-${section.key}") {
                 Text(
-                    text = resort.displayName,
+                    text = section.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
                 )
             }
-            items(parks, key = { it.park.name }) { snapshot ->
+            items(section.snapshots, key = { it.park.name }) { snapshot ->
                 ParkCard(
                     snapshot = snapshot,
                     onClick = { onParkClick(snapshot.park) },
                     modifier = Modifier.animateItem(),
-                    youAreHere = snapshot.park == youAreHere,
+                    youAreHere = section.isHere,
                 )
             }
         }

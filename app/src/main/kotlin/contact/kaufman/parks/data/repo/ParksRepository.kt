@@ -8,6 +8,7 @@ import contact.kaufman.parks.data.api.ThemeParksApi
 import contact.kaufman.parks.data.api.WeatherApi
 import contact.kaufman.parks.data.crowd.CrowdBaselines
 import contact.kaufman.parks.domain.EntityKind
+import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.ForecastPoint
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.Park
@@ -16,6 +17,7 @@ import contact.kaufman.parks.domain.ParkHours
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
 import contact.kaufman.parks.domain.Queue
+import contact.kaufman.parks.domain.Resort
 import contact.kaufman.parks.domain.Showtime
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -119,26 +121,30 @@ class ParksRepository @Inject constructor(
     }
 
     /**
-     * Weather for one park. Fetched when a park screen opens, then reused for
-     * [WEATHER_FRESH_FOR_SECONDS] so bouncing between parks does not hammer Open-Meteo.
+     * Weather for a park — which is really weather for its **resort**.
      *
-     * Still nothing in the background: every call here is driven by something on screen.
+     * Open-Meteo is point-based, so there is no "Walt Disney World" location as such. But
+     * a resort's parks sit a few miles apart and an afternoon storm does not pick between
+     * them, so one reading per resort is honest at this scale and means checking EPCOT
+     * also answers for Magic Kingdom. Four parks, one call.
+     *
+     * Still nothing in the background: every call here is driven by something on screen,
+     * and repeats inside [WEATHER_FRESH_FOR_SECONDS] are served from memory.
      */
     suspend fun weather(park: Park): ParkWeather? =
-        weatherFor(park.id, park.latitude, park.longitude, park.displayName)?.also { fetched ->
-            snapshots[park] = (snapshots[park] ?: ParkSnapshot(park)).copy(weather = fetched)
+        resortWeather(park.resort)?.also { fetched ->
+            // Fan the one reading out to every park of that resort, so a screen opened
+            // later already has it without another request.
+            Park.entries.filter { it.resort == park.resort }.forEach { sibling ->
+                snapshots[sibling] = (snapshots[sibling] ?: ParkSnapshot(sibling)).copy(weather = fetched)
+            }
         }
 
-    /**
-     * Resort-wide weather for the dashboard, taken from the middle of Walt Disney World
-     * property near Bay Lake.
-     *
-     * Open-Meteo is point-based, so there is no "Walt Disney World" as such — but the four
-     * parks sit within about five miles of each other, and an afternoon storm rarely
-     * respects that boundary. One reading for the header is honest at this scale.
-     */
-    suspend fun resortWeather(): ParkWeather? =
-        weatherFor(RESORT_KEY, RESORT_LATITUDE, RESORT_LONGITUDE, "Walt Disney World")
+    /** The dashboard header reads Walt Disney World, which is where Zak mostly is. */
+    suspend fun resortWeather(resort: Resort = Resort.WALT_DISNEY_WORLD): ParkWeather? {
+        val (latitude, longitude) = Geo.resortCenter(resort)
+        return weatherFor(resort.name, latitude, longitude, resort.displayName)
+    }
 
     private suspend fun weatherFor(
         key: String,
@@ -209,10 +215,7 @@ class ParksRepository @Inject constructor(
          *  free for non-commercial use — worth not abusing. */
         const val WEATHER_FRESH_FOR_SECONDS = 900L
 
-        const val RESORT_KEY = "wdw-resort"
-        /** Bay Lake, roughly central to Walt Disney World property. */
-        const val RESORT_LATITUDE = 28.3852
-        const val RESORT_LONGITUDE = -81.5639
+
     }
 }
 

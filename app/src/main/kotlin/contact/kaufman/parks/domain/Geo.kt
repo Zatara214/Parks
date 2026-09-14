@@ -54,6 +54,18 @@ object Geo {
     /** Generous enough to cover a whole park from its centre, tight enough that the
      *  parking lots and the interstate do not count as being in one. */
     const val DEFAULT_PARK_RADIUS_METERS = 1_200.0
+
+    /**
+     * The midpoint of a resort's parks.
+     *
+     * Computed rather than hardcoded so it follows the park coordinates if one is ever
+     * corrected. Used as the single point a resort's weather is read from — see
+     * `ParksRepository.weather`.
+     */
+    fun resortCenter(resort: Resort): Pair<Double, Double> {
+        val parks = Park.entries.filter { it.resort == resort }
+        return parks.map { it.latitude }.average() to parks.map { it.longitude }.average()
+    }
 }
 
 /** Metres from [latitude]/[longitude] to this entity, or null if it has no location. */

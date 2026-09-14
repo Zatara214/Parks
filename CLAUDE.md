@@ -181,9 +181,13 @@ Two traps already hit:
 - Fetched when a screen that shows it appears — the dashboard header on open, a park screen
   on open. **Never in the background**, and cached per location for
   `WEATHER_FRESH_FOR_SECONDS` (15 min) so bouncing between parks does not hammer Open-Meteo.
-- The dashboard reads one resort-wide point near **Bay Lake**, central to WDW property.
-  Open-Meteo is point-based so there is no "Walt Disney World" location; the four parks are
-  within ~5 miles, which is inside the noise of an afternoon storm.
+- **One reading per resort, not per park.** `weather(park)` resolves to its resort's centre
+  (computed by `Geo.resortCenter`) and fans the result out to every sibling park's snapshot,
+  so opening EPCOT also answers for Magic Kingdom — four parks, one request. The two
+  resorts stay separate: Universal is a dozen miles up I-4 and genuinely gets different
+  weather. Pinned by `ResortWeatherTest`.
+- The dashboard header follows the resort you are **detected in**, falling back to Walt
+  Disney World.
 - A failed refresh returns the **last cached reading** rather than null, so the strip never
   blanks on a flaky connection.
 
