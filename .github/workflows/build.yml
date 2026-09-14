@@ -32,11 +32,14 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             NAME="${GITHUB_REF#refs/tags/v}"
+            IFS='.-' read -r MAJ MIN PAT _ <<< "$NAME"
+            CODE=$(( MAJ * 10000 + MIN * 100 + PAT ))
           else
+            # A CI build is 0.0.0, which would derive versionCode 0 — AGP rejects that.
+            # Untagged builds are never published, so the run number is code enough.
             NAME="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+            CODE="${GITHUB_RUN_NUMBER}"
           fi
-          IFS='.-' read -r MAJ MIN PAT _ <<< "$NAME"
-          CODE=$(( MAJ * 10000 + MIN * 100 + PAT ))
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
           echo "version $NAME ($CODE)"

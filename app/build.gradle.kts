@@ -37,7 +37,9 @@ android {
         minSdk = 31
         targetSdk = 37
         // CI supplies these from the tag; the fallbacks are for local builds only.
-        versionCode = System.getenv("PARKS_VERSION_CODE")?.toIntOrNull() ?: 1
+        // AGP rejects a versionCode of 0, so an unusable value falls back rather than
+        // failing configuration.
+        versionCode = System.getenv("PARKS_VERSION_CODE")?.toIntOrNull()?.takeIf { it > 0 } ?: 1
         versionName = System.getenv("PARKS_VERSION_NAME") ?: "0.1.0"
 
         vectorDrawables { useSupportLibrary = true }
