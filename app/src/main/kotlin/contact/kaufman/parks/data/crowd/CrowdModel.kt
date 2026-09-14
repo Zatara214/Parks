@@ -32,6 +32,10 @@ object CrowdModel {
      *  freak day cannot redefine "normal". */
     const val MIN_OBSERVATIONS_TO_TRUST = 8
 
+    /** Below this, a day's "average" is really just one glance and should not be plotted
+     *  or averaged as though it described the whole midday window. */
+    const val MIN_SAMPLES_FOR_A_DAY = 3
+
     /**
      * A ride's contribution to the park level.
      *

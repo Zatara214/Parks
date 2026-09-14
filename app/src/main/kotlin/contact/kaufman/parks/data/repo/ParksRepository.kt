@@ -196,6 +196,9 @@ class ParksRepository @Inject constructor(
         return weather
     }
 
+    /** The app's own recorded history for one ride. Empty until it has watched a few days. */
+    suspend fun waitHistory(attractionId: String) = crowdBaselines.history(attractionId)
+
     private fun ParkSnapshot.isFresh(): Boolean {
         val at = fetchedAt ?: return false
         return (Clock.System.now() - at).inWholeSeconds < FRESH_FOR_SECONDS

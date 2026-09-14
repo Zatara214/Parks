@@ -78,6 +78,8 @@ class ParkDetailViewModel @AssistedInject constructor(
 
     fun refresh() = load(force = true)
 
+    suspend fun waitHistory(attractionId: String) = repository.waitHistory(attractionId)
+
     fun selectTab(tab: ParkTab) = _state.update { it.copy(tab = tab) }
 
     fun selectSort(sort: RideSort) = _state.update { it.copy(sort = sort) }

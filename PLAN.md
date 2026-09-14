@@ -58,13 +58,17 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 
 **Phase 1 complete.**
 
-### Phase 2 — depth
+### Phase 2 — depth (complete apart from nearest-ride)
 - [x] **"Best time to ride today"** — tapping a Disney ride expands an hourly forecast bar
       chart with the quietest hour still ahead called out. Universal sends no forecast, so
       those rows are not expandable at all rather than opening an empty chart.
       Advice is withheld below a 10-minute saving, and when the queue is already shorter
       than anything forecast.
-- [ ] Wait-time history chart per ride, from the samples already being recorded.
+- [x] **Wait-time history chart** — an expanded ride shows the app's own recorded midday
+      averages beneath Disney's forecast, so measurement and projection sit together but
+      read as different things. Days with fewer than three samples are dropped: one glance
+      recorded while walking past is not a day's average. Works at Universal too, which has
+      no forecast — those rows become expandable once there is history to show.
 - [ ] Lightning Lane pricing and availability from the schedule `purchases` array.
 - [x] **Hand-off to the official apps** — an action on every park screen, plus an explicit
       card on the Dining tab where mobile order actually lives. Launches the installed app,

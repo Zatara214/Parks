@@ -7,6 +7,7 @@ import contact.kaufman.parks.data.db.WaitSampleEntity
 import contact.kaufman.parks.domain.CrowdReading
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkEntity
+import contact.kaufman.parks.domain.WaitHistoryDay
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -136,6 +137,18 @@ class CrowdBaselines @Inject constructor(
             isProvisional = provisional,
         )
     }
+
+    /**
+     * This ride's recorded midday averages, oldest first.
+     *
+     * Days with a thin sample count are dropped: a single reading taken while walking past
+     * is not a day's average, and plotting it as one would overstate what the app knows.
+     */
+    suspend fun history(attractionId: String, days: Int = 14): List<WaitHistoryDay> =
+        dailyAverages.recentDays(attractionId, days)
+            .filter { it.sampleCount >= CrowdModel.MIN_SAMPLES_FOR_A_DAY }
+            .map { WaitHistoryDay(LocalDate.parse(it.parkDate), it.averageMinutes, it.sampleCount) }
+            .sortedBy { it.date }
 
     /** Raw samples are only needed until they roll up; the daily means are the history
      *  worth keeping. Six weeks leaves room to rebuild if a roll-up ever goes wrong. */

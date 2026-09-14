@@ -24,6 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.Queue
+import contact.kaufman.parks.domain.WaitHistoryDay
 import contact.kaufman.parks.ui.components.toParkClockTime
 import contact.kaufman.parks.ui.theme.waitColor
 
@@ -48,11 +51,27 @@ import contact.kaufman.parks.ui.theme.waitColor
  * and everything else is secondary text underneath the name.
  */
 @Composable
-fun RideRow(entity: ParkEntity, modifier: Modifier = Modifier) {
+fun RideRow(
+    entity: ParkEntity,
+    modifier: Modifier = Modifier,
+    loadHistory: (suspend (String) -> List<WaitHistoryDay>)? = null,
+) {
     var expanded by rememberSaveable(entity.id) { mutableStateOf(false) }
-    // Only Disney publishes a forecast, so at Universal the row is not a control at all
-    // and must not pretend to be one.
-    val canExpand = entity.forecast.count { it.waitMinutes != null } >= 2
+    var history by remember(entity.id) { mutableStateOf<List<WaitHistoryDay>>(emptyList()) }
+
+    // History is only queried once a row is actually opened — reading every ride's record
+    // to decide whether to draw a chevron would be a database scan per refresh.
+    LaunchedEffect(expanded, entity.id) {
+        if (expanded && loadHistory != null && history.isEmpty()) {
+            history = loadHistory(entity.id)
+        }
+    }
+
+    // Universal publishes no forecast, so those rows have nothing to open on arrival — but
+    // once the app has watched a ride for a few days its own history is worth showing, and
+    // that applies at both resorts.
+    val hasForecast = entity.forecast.count { it.waitMinutes != null } >= 2
+    val canExpand = hasForecast || history.isNotEmpty()
 
     Column(modifier.fillMaxWidth()) {
         Row(
@@ -100,7 +119,10 @@ fun RideRow(entity: ParkEntity, modifier: Modifier = Modifier) {
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {
-            RideForecast(entity)
+            Column {
+                RideForecast(entity)
+                WaitHistory(history)
+            }
         }
     }
 }

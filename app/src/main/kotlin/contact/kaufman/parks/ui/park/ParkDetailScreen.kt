@@ -174,7 +174,11 @@ fun ParkDetailScreen(
                     }
                 } else {
                     items(entities, key = { it.id }) { entity ->
-                        RideRow(entity, Modifier.animateItem())
+                        RideRow(
+                            entity = entity,
+                            modifier = Modifier.animateItem(),
+                            loadHistory = viewModel::waitHistory,
+                        )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
                     }
                 }

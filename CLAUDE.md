@@ -150,6 +150,21 @@ Two traps already hit:
   override (`gps provider: ProviderRequest[OFF]`), so simulating a position in a park is
   not currently possible here — verify location features on a real device.
 
+## Wait-time history
+- An expanded ride shows two charts: Disney's **forecast** for the hours left today, and
+  below it the app's **own recorded** midday averages for recent days. They are deliberately
+  labelled differently — one is a projection, the other is measurement, and conflating them
+  would misrepresent what the app actually knows.
+- Days with fewer than `CrowdModel.MIN_SAMPLES_FOR_A_DAY` samples are excluded. A single
+  reading captured while walking past is not a midday average, and plotting it beside real
+  days would let an outlier dominate the chart.
+- History is loaded **only when a row is opened**. Reading every ride's record just to
+  decide whether to draw a chevron would be a database scan per refresh.
+- This is why Universal rows can now expand at all: they have no forecast, but once the app
+  has watched a ride for a few days its own history is worth showing.
+- To exercise the chart without waiting days, seed `daily_wait_averages` directly:
+  `adb shell run-as contact.kaufman.parks.debug sqlite3 databases/parks.db "INSERT ..."`.
+
 ## Conventions
 - Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
 - Expressive opt-ins are set once in `app/build.gradle.kts`, not per call site.

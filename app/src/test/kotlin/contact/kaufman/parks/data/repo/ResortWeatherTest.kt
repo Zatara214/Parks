@@ -126,4 +126,6 @@ private object NoOpDailyWaitAverageDao : DailyWaitAverageDao {
         minObservations: Int,
     ): List<AttractionAverage> = emptyList()
     override fun observedDayCount(parkId: String): Flow<Int> = flowOf(0)
+    override suspend fun recentDays(attractionId: String, limit: Int): List<DailyWaitAverageEntity> =
+        emptyList()
 }

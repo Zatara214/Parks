@@ -80,6 +80,22 @@ interface DailyWaitAverageDao {
 
     @Query("SELECT COUNT(DISTINCT parkDate) FROM daily_wait_averages WHERE parkId = :parkId")
     fun observedDayCount(parkId: String): Flow<Int>
+
+    /**
+     * What this ride has actually done on recent days, oldest last.
+     *
+     * These are the app's own observations, not the seed table — the point of the chart is
+     * to show measurements, so a ride with no recorded days simply has no chart.
+     */
+    @Query(
+        """
+        SELECT * FROM daily_wait_averages
+        WHERE attractionId = :attractionId
+        ORDER BY parkDate DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun recentDays(attractionId: String, limit: Int = 14): List<DailyWaitAverageEntity>
 }
 
 @Dao

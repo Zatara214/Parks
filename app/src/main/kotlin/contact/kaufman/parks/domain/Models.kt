@@ -113,6 +113,13 @@ data class ParkWeather(
     val fetchedAt: Instant,
 )
 
+/** One day's measured midday average for a ride, from the app's own records. */
+data class WaitHistoryDay(
+    val date: LocalDate,
+    val averageMinutes: Float,
+    val sampleCount: Int,
+)
+
 data class CrowdReading(
     val level: Int,
     val exactLevel: Float,
