@@ -139,7 +139,15 @@ Two traps already hit:
   dashboard. Check `dumpsys activity activities | grep ResumedActivity:` between steps
   rather than assuming a tap landed.
 
-## Secrets
+## Secrets and release identity
 - Release keystore lives in `~/.config/parks/keystore.properties` (outside the repo) and as
   GitHub Actions secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+- **Every published build is signed with `~/.config/parks/parks-release.jks`, SHA-256
+  `83:B8:F7:0F:C6:B1:18:CE:…`, alias `parks`.** A different key means Zak has to uninstall
+  and lose his data before he can update. PKCS12, so the key password equals the store
+  password. Back this file up; losing it ends the release line.
+- The Gradle config **falls back to the debug key** when no keystore is found, so a release
+  built without secrets is debug-signed, installs happily, and then rejects every properly
+  signed update afterwards. CI fails a tagged build whose APK carries `CN=Android Debug`;
+  do not remove that check.
 - Never commit `local.properties`, `keystore.properties`, or `*.jks`.
