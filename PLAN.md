@@ -36,7 +36,7 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 - Today dashboard with real live data, verified on-device.
 - GPLv3, GitHub Actions build + signed tagged releases.
 
-### Phase 1 — the core loop — mostly done
+### Phase 1 — the core loop — done
 - [x] **Navigation 3** — dashboard → park detail → parking, with predictive-back handled
       by `predictivePopTransitionSpec` (the plain pop spec does not drive the gesture).
 - [x] **Park detail screen** — Rides/Shows/Dining tabs, sort by wait or name, "open only"
@@ -45,9 +45,13 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       end to end on-device, survives a restart.
 - [x] **Weather on the park screen** — behind a "Check" tap, never fetched automatically.
       Shows feels-like (the number that matters in Orlando) and the next hours of rain chance.
-- [ ] Settings: dynamic colour toggle, temperature units, which parks to show.
+- [x] **Settings** — dynamic colour, light/dark/system, temperature unit, and which parks
+      appear on the dashboard. Plus an About screen with the generated licence list.
+      Hiding every park is refused: it would leave a blank dashboard with no way back.
 - [ ] Filter rides by land — needs land data, which `/children` does not carry. Would have
       to be derived from each ride's lat/long.
+
+**Phase 1 complete.**
 
 ### Phase 2 — depth
 - [ ] Wait-time history chart per ride, from the samples already being recorded.

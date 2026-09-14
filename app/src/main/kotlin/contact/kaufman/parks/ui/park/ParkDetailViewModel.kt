@@ -2,6 +2,8 @@ package contact.kaufman.parks.ui.park
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import contact.kaufman.parks.data.prefs.SettingsStore
+import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
 import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Park
@@ -14,7 +16,10 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,7 +50,12 @@ data class ParkDetailUiState(
 class ParkDetailViewModel @AssistedInject constructor(
     @Assisted private val park: Park,
     private val repository: ParksRepository,
+    settings: SettingsStore,
 ) : ViewModel() {
+
+    val temperatureUnit: StateFlow<TemperatureUnit> = settings.settings
+        .map { it.temperatureUnit }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TemperatureUnit.FAHRENHEIT)
 
     @AssistedFactory
     interface Factory {

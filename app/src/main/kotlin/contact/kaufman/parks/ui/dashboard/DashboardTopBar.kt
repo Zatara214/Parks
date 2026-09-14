@@ -1,6 +1,10 @@
 package contact.kaufman.parks.ui.dashboard
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -15,13 +19,18 @@ import kotlin.time.Clock
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardTopBar(scrollBehavior: TopAppBarScrollBehavior) {
+fun DashboardTopBar(scrollBehavior: TopAppBarScrollBehavior, onSettingsClick: () -> Unit) {
     val today = Clock.System.now().toLocalDateTime(TimeZone.of("America/New_York")).date
 
     LargeFlexibleTopAppBar(
         title = { Text("Today") },
         subtitle = {
             Text("${today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${today.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${today.day}")
+        },
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings")
+            }
         },
         scrollBehavior = scrollBehavior,
     )

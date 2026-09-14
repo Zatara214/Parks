@@ -47,6 +47,15 @@ language and proactively suggest workflow improvements. Roadmap and open decisio
   not `kotlinx.datetime` (that typealias is deprecated).
 - `hiltViewModel()` now lives in `androidx.hilt.lifecycle.viewmodel.compose`, not
   `androidx.hilt.navigation.compose`.
+- Navigation 3: `entry` is a **member extension** on `EntryProviderScope`, so it needs no
+  import inside `entryProvider { }` — importing `androidx.navigation3.runtime.entry`
+  fails. `rememberSceneSetupNavEntryDecorator` is **internal**; `NavDisplay` installs it
+  itself, so pass only the saveable-state and view-model decorators.
+- AboutLibraries 15.x: the licence badge is tinted by a **per-licence hue resolver**, and
+  neither `licenseChipColors` nor `ContrastLevel.High` overrides it — under a dynamic
+  palette that renders pale-on-pale in light theme. The fix is
+  `m3VariantColors(licenseHueResolver = LicenseHueResolver.None, licenseBadgeContainer = …,
+  licenseBadgeContent = …)`. See `ui/settings/AboutScreen.kt`.
 
 ## Architecture
 - Package `contact.kaufman.parks`; layers `data/{api,db,repo,crowd,prefs}`, `domain/`,
@@ -118,6 +127,17 @@ Two traps already hit:
 - `/entity/{id}/history` exists and works, but it is a **rolling ~48-hour window only** and
   ignores every date parameter. There is no deep backfill to be had.
 - WDW schedules also carry Lightning Lane pricing and availability under `purchases`.
+
+## Driving the emulator
+- **Grassfed runs in a freeform floating window on this AVD** (roughly `Rect(329, 830 -
+  952, 2110)`). Taps aimed at Parks inside that rect land in Grassfed instead, which looks
+  exactly like Parks navigating somewhere wrong. `adb shell pm disable-user --user 0
+  com.grassfed` before a tap-driven run, and **re-enable it afterwards**.
+- `input keyevent 111` (ESCAPE) exits the app here rather than just closing the keyboard —
+  use `keyevent 4` (BACK) to dismiss it.
+- Re-installing resets the nav stack, so scripted tap sequences must start from the
+  dashboard. Check `dumpsys activity activities | grep ResumedActivity:` between steps
+  rather than assuming a tap landed.
 
 ## Secrets
 - Release keystore lives in `~/.config/parks/keystore.properties` (outside the repo) and as

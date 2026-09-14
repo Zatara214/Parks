@@ -49,6 +49,7 @@ fun ParkDetailScreen(
     ),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val temperatureUnit by viewModel.temperatureUnit.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -93,6 +94,7 @@ fun ParkDetailScreen(
                     WeatherCard(
                         weather = state.weather,
                         isLoading = state.isLoadingWeather,
+                        unit = temperatureUnit,
                         onLoad = viewModel::loadWeather,
                         modifier = Modifier.padding(vertical = 8.dp),
                     )

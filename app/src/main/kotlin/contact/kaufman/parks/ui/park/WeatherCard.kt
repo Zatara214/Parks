@@ -24,8 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.domain.ParkWeather
-import kotlin.math.roundToInt
+import contact.kaufman.parks.ui.components.formatTemperature
 
 /**
  * Weather, behind a tap.
@@ -38,6 +39,7 @@ import kotlin.math.roundToInt
 fun WeatherCard(
     weather: ParkWeather?,
     isLoading: Boolean,
+    unit: TemperatureUnit,
     onLoad: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -47,7 +49,7 @@ fun WeatherCard(
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             when {
-                weather != null -> WeatherContent(weather)
+                weather != null -> WeatherContent(weather, unit)
                 isLoading -> Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -72,7 +74,7 @@ fun WeatherCard(
 }
 
 @Composable
-private fun WeatherContent(weather: ParkWeather) {
+private fun WeatherContent(weather: ParkWeather, unit: TemperatureUnit) {
     AnimatedVisibility(visible = true, enter = fadeIn() + expandVertically()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -83,7 +85,7 @@ private fun WeatherContent(weather: ParkWeather) {
                     tint = MaterialTheme.colorScheme.secondary,
                 )
                 Text(
-                    text = weather.temperatureF?.let { "${it.roundToInt()}°" } ?: "—",
+                    text = formatTemperature(weather.temperatureF, unit),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -93,13 +95,13 @@ private fun WeatherContent(weather: ParkWeather) {
                     // normal afternoon and a miserable one.
                     weather.feelsLikeF?.let {
                         Text(
-                            text = "Feels like ${it.roundToInt()}°",
+                            text = "Feels like ${formatTemperature(it, unit)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     val range = listOfNotNull(
-                        weather.highF?.let { "H ${it.roundToInt()}°" },
-                        weather.lowF?.let { "L ${it.roundToInt()}°" },
+                        weather.highF?.let { "H ${formatTemperature(it, unit)}" },
+                        weather.lowF?.let { "L ${formatTemperature(it, unit)}" },
                     ).joinToString(" · ")
                     if (range.isNotEmpty()) {
                         Text(

@@ -38,16 +38,18 @@ import contact.kaufman.parks.domain.ParkSnapshot
 fun DashboardScreen(
     onParkClick: (Park) -> Unit,
     onParkingClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val parking by viewModel.activeParking.collectAsStateWithLifecycle()
+    val visibleParks by viewModel.visibleParks.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { DashboardTopBar(scrollBehavior) },
+        topBar = { DashboardTopBar(scrollBehavior, onSettingsClick) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -68,7 +70,12 @@ fun DashboardScreen(
                     )
                 }
 
-                else -> ParkList(state.snapshots, parking, onParkClick, onParkingClick)
+                else -> ParkList(
+                    snapshots = state.snapshots.filter { it.park in visibleParks },
+                    parking = parking,
+                    onParkClick = onParkClick,
+                    onParkingClick = onParkingClick,
+                )
             }
         }
     }

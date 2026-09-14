@@ -12,3 +12,9 @@ data class ParkDetailKey(val parkId: String) : NavKey
 
 @Serializable
 data class ParkingKey(val parkId: String?) : NavKey
+
+@Serializable
+data object SettingsKey : NavKey
+
+@Serializable
+data object AboutKey : NavKey
