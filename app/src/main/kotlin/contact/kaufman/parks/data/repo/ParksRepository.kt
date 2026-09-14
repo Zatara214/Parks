@@ -19,6 +19,7 @@ import contact.kaufman.parks.domain.Showtime
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -123,15 +124,18 @@ class ParksRepository @Inject constructor(
 
         val current = response.current
         val daily = response.daily
-        val nowHour = Clock.System.now().toLocalDateTime(parkTimeZone).hour
+        val now = Clock.System.now().toLocalDateTime(parkTimeZone)
 
+        // Compare whole timestamps, not hour-of-day: the forecast spans two days, so
+        // filtering on `hour >= nowHour` matches 11PM on both of them and throws away
+        // everything after midnight.
         val hourly = response.hourly?.let { h ->
             h.time.indices.mapNotNull { i ->
-                val time = runCatching { LocalTime.parse(h.time[i].substringAfter('T')) }.getOrNull()
+                val at = runCatching { LocalDateTime.parse(h.time[i]) }.getOrNull()
                     ?: return@mapNotNull null
                 val chance = h.precipitationProbability.getOrNull(i) ?: return@mapNotNull null
-                time to chance
-            }.filter { it.first.hour >= nowHour }.take(8)
+                Triple(at, at.time, chance)
+            }.filter { it.first >= now }.take(8).map { it.second to it.third }
         }.orEmpty()
 
         val weather = ParkWeather(

@@ -36,15 +36,18 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 - Today dashboard with real live data, verified on-device.
 - GPLv3, GitHub Actions build + signed tagged releases.
 
-### Phase 1 — the core loop — next
-- [ ] **Park detail screen** — rides sorted by wait, shows with showtimes, dining. Filter
-      chips for open/closed and by land. This is the biggest remaining gap.
-- [ ] **Parking** — the record-a-spot flow. Repository and Room table already exist;
-      needs the UI and a dashboard pin. Free-form lot + row on purpose: Disney rows are
-      "Heroes 12", Universal's are "Jaws, Level 4", Epic is different again.
-- [ ] **Weather on the park screen** — current, feels-like, and the next few hours of rain
-      chance, which is the thing that decides whether to bring a poncho.
+### Phase 1 — the core loop — mostly done
+- [x] **Navigation 3** — dashboard → park detail → parking, with predictive-back handled
+      by `predictivePopTransitionSpec` (the plain pop spec does not drive the gesture).
+- [x] **Park detail screen** — Rides/Shows/Dining tabs, sort by wait or name, "open only"
+      filter. Rides with no posted wait sort to the bottom rather than as a zero.
+- [x] **Parking** — record-a-spot flow with a pinned dashboard card and history. Verified
+      end to end on-device, survives a restart.
+- [x] **Weather on the park screen** — behind a "Check" tap, never fetched automatically.
+      Shows feels-like (the number that matters in Orlando) and the next hours of rain chance.
 - [ ] Settings: dynamic colour toggle, temperature units, which parks to show.
+- [ ] Filter rides by land — needs land data, which `/children` does not carry. Would have
+      to be derived from each ride's lat/long.
 
 ### Phase 2 — depth
 - [ ] Wait-time history chart per ride, from the samples already being recorded.
@@ -66,5 +69,10 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 - **Epic Universe baselines are provisional.** The park opened May 2025 and has not settled
   into a normal year, so its seeds are the least trustworthy in the table and should be the
   first replaced by recorded history.
-- **Universal dining has no live status.** Worth showing the `/children` list anyway, or
-  leave Universal dining out until upstream covers it?
+
+## Deferred
+- **Universal dining is out for now** (decided 2026-09-13). Universal's `/live` feed omits
+  restaurants entirely, so USF/IOA/EU dining could only be a static name-and-location list
+  with no "open now". Zak visits Universal much less than Disney, so a half-feature is not
+  worth shipping. Revisit once the app is real and a secondary source has been looked for —
+  Zak intends to hunt for one himself. Disney dining is unaffected and ships normally.

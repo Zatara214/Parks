@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.domain.ParkSnapshot
 
 /**
@@ -36,10 +37,12 @@ import contact.kaufman.parks.domain.ParkSnapshot
 @Composable
 fun DashboardScreen(
     onParkClick: (Park) -> Unit,
+    onParkingClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val parking by viewModel.activeParking.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -65,14 +68,19 @@ fun DashboardScreen(
                     )
                 }
 
-                else -> ParkList(state.snapshots, onParkClick)
+                else -> ParkList(state.snapshots, parking, onParkClick, onParkingClick)
             }
         }
     }
 }
 
 @Composable
-private fun ParkList(snapshots: List<ParkSnapshot>, onParkClick: (Park) -> Unit) {
+private fun ParkList(
+    snapshots: List<ParkSnapshot>,
+    parking: ParkingRecordEntity?,
+    onParkClick: (Park) -> Unit,
+    onParkingClick: () -> Unit,
+) {
     val byResort = snapshots.groupBy { it.park.resort }
 
     LazyColumn(
@@ -80,6 +88,10 @@ private fun ParkList(snapshots: List<ParkSnapshot>, onParkClick: (Park) -> Unit)
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item(key = "parking") {
+            ParkingPin(parking, onParkingClick, Modifier.animateItem())
+        }
+
         byResort.forEach { (resort, parks) ->
             item(key = "header-${resort.name}") {
                 Text(
