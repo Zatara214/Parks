@@ -139,9 +139,16 @@ Two traps already hit:
   their centres are under 1km apart, so a poor fix near the boundary can pick the wrong
   one. A test pins that distance so the tightness is never a surprise. Real polygons would
   settle it — see the parking-geofence section of PLAN.md.
+- **`Log.d`/`Log.v` are stripped from release** by a proguard `-assumenosideeffects` rule.
+  The location diagnostics print GPS coordinates, and those have no business surviving into
+  a shipped build of this app. Warnings and errors are kept. If you add a diagnostic that
+  must survive release, use `Log.w`, and think hard about what is in it.
 - **Emulator caveat:** changing the emulator's system clock wedges its GPS backend, after
   which `adb emu geo fix` returns OK and does nothing. If location testing goes dead after
-  a date-change test, restart the AVD rather than debugging the app.
+  a date-change test, restart the AVD rather than debugging the app. Note that even after
+  a restart the AVD carries a **persisted** last-known location that `geo fix` will not
+  override (`gps provider: ProviderRequest[OFF]`), so simulating a position in a park is
+  not currently possible here — verify location features on a real device.
 
 ## Conventions
 - Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
