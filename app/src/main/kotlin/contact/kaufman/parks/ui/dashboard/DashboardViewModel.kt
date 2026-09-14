@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.data.repo.ParkingRepository
 import contact.kaufman.parks.data.prefs.SettingsStore
+import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkSnapshot
+import contact.kaufman.parks.domain.ParkWeather
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +21,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class DashboardUiState(
+    val resortWeather: ParkWeather? = null,
     val snapshots: List<ParkSnapshot> = Park.entries.map { ParkSnapshot(it) },
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -35,6 +38,10 @@ class DashboardViewModel @Inject constructor(
 
     /** Which parks the dashboard shows. Hidden parks are still fetched — a refresh is
      *  one batched call either way, and unhiding one should not mean waiting for it. */
+    val temperatureUnit: StateFlow<TemperatureUnit> = settings.settings
+        .map { it.temperatureUnit }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TemperatureUnit.FAHRENHEIT)
+
     val visibleParks: StateFlow<List<Park>> = settings.settings
         .map { it.visibleParks() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Park.entries)
@@ -49,6 +56,19 @@ class DashboardViewModel @Inject constructor(
         // Yesterday's spot should not still be pinned this morning.
         viewModelScope.launch { parkingRepository.expireStale() }
         load(force = false)
+        loadResortWeather()
+    }
+
+    /**
+     * Resort weather for the header. Fetched once when the dashboard appears and then
+     * served from the repository's 15-minute cache — deliberately not a live feed, since
+     * Zak has a dedicated weather app for that.
+     */
+    private fun loadResortWeather() {
+        viewModelScope.launch {
+            val weather = parks.resortWeather() ?: return@launch
+            _state.value = _state.value.copy(resortWeather = weather)
+        }
     }
 
     fun refresh() = load(force = true)
@@ -60,7 +80,7 @@ class DashboardViewModel @Inject constructor(
                 isRefreshing = force,
             )
             val snapshots = parks.refreshAll(force = force)
-            _state.value = DashboardUiState(
+            _state.value = _state.value.copy(
                 snapshots = snapshots,
                 isLoading = false,
                 isRefreshing = false,

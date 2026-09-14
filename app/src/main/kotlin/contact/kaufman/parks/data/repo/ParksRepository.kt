@@ -46,6 +46,7 @@ class ParksRepository @Inject constructor(
     private val parkTimeZone = TimeZone.of("America/New_York")
 
     private val snapshots = mutableMapOf<Park, ParkSnapshot>()
+    private val weatherCache = mutableMapOf<String, ParkWeather>()
     private val childrenCache = mutableMapOf<Park, List<ChildEntityDto>>()
 
     fun cached(park: Park): ParkSnapshot? = snapshots[park]
@@ -117,11 +118,44 @@ class ParksRepository @Inject constructor(
         Park.entries.map { async { refresh(it, force) } }.map { it.await() }
     }
 
-    /** On-demand only. Nothing calls this unless a park screen is showing weather. */
-    suspend fun weather(park: Park): ParkWeather? {
-        val response = runCatching { weatherApi.forecast(park.latitude, park.longitude) }
-            .onFailure { Log.w(TAG, "weather fetch failed for ${park.displayName}", it) }
-            .getOrNull() ?: return null
+    /**
+     * Weather for one park. Fetched when a park screen opens, then reused for
+     * [WEATHER_FRESH_FOR_SECONDS] so bouncing between parks does not hammer Open-Meteo.
+     *
+     * Still nothing in the background: every call here is driven by something on screen.
+     */
+    suspend fun weather(park: Park): ParkWeather? =
+        weatherFor(park.id, park.latitude, park.longitude, park.displayName)?.also { fetched ->
+            snapshots[park] = (snapshots[park] ?: ParkSnapshot(park)).copy(weather = fetched)
+        }
+
+    /**
+     * Resort-wide weather for the dashboard, taken from the middle of Walt Disney World
+     * property near Bay Lake.
+     *
+     * Open-Meteo is point-based, so there is no "Walt Disney World" as such — but the four
+     * parks sit within about five miles of each other, and an afternoon storm rarely
+     * respects that boundary. One reading for the header is honest at this scale.
+     */
+    suspend fun resortWeather(): ParkWeather? =
+        weatherFor(RESORT_KEY, RESORT_LATITUDE, RESORT_LONGITUDE, "Walt Disney World")
+
+    private suspend fun weatherFor(
+        key: String,
+        latitude: Double,
+        longitude: Double,
+        label: String,
+    ): ParkWeather? {
+        weatherCache[key]?.let { cached ->
+            if ((Clock.System.now() - cached.fetchedAt).inWholeSeconds < WEATHER_FRESH_FOR_SECONDS) {
+                return cached
+            }
+        }
+
+        val response = runCatching { weatherApi.forecast(latitude, longitude) }
+            .onFailure { Log.w(TAG, "weather fetch failed for $label", it) }
+            // A failed refresh keeps whatever was last read rather than blanking the strip.
+            .getOrNull() ?: return weatherCache[key]
 
         val current = response.current
         val daily = response.daily
@@ -152,7 +186,7 @@ class ParksRepository @Inject constructor(
             hourlyRainChance = hourly,
             fetchedAt = Clock.System.now(),
         )
-        snapshots[park] = (snapshots[park] ?: ParkSnapshot(park)).copy(weather = weather)
+        weatherCache[key] = weather
         return weather
     }
 
@@ -170,6 +204,15 @@ class ParksRepository @Inject constructor(
         /** themeparks.wiki itself refreshes on the order of minutes, so anything shorter
          *  would hammer a volunteer service for numbers that have not changed. */
         const val FRESH_FOR_SECONDS = 120L
+
+        /** Weather moves slowly enough that a quarter hour is plenty, and Open-Meteo is
+         *  free for non-commercial use — worth not abusing. */
+        const val WEATHER_FRESH_FOR_SECONDS = 900L
+
+        const val RESORT_KEY = "wdw-resort"
+        /** Bay Lake, roughly central to Walt Disney World property. */
+        const val RESORT_LATITUDE = 28.3852
+        const val RESORT_LONGITUDE = -81.5639
     }
 }
 

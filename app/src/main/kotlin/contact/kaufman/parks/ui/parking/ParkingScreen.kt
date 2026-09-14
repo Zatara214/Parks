@@ -1,21 +1,27 @@
 package contact.kaufman.parks.ui.parking
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,27 +42,33 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkingLots
+import contact.kaufman.parks.domain.Resort
 import contact.kaufman.parks.ui.components.toParkClockTime
+import kotlinx.coroutines.launch
 import kotlin.time.Instant
 
 /**
  * Record where the car is.
  *
- * Lot names come from [ParkingLots] so a spot is two taps rather than a spelling test,
- * but every field stays editable: a table of section names goes stale the moment a resort
- * renames a lot, and a stale table must never block recording where you actually parked.
+ * Everything selectable is a fused button group, because every step here is a
+ * pick-exactly-one: which park, which section, which level. There is no free-text section
+ * field — the posted names are all that exist, and typing one was only ever a worse way to
+ * say the same thing. Anything genuinely unusual goes in the note.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -70,8 +82,12 @@ fun ParkingScreen(
     val active by viewModel.active.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
     val recentRows by viewModel.recentRows.collectAsStateWithLifecycle()
+
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val rowRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(initialPark) { viewModel.setPark(initialPark) }
 
@@ -89,9 +105,15 @@ fun ParkingScreen(
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                // Without this the keyboard draws straight over the row field under
+                // edge-to-edge — `adjustResize` alone does not resize a Compose window.
+                .imePadding(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "active") {
                 AnimatedVisibility(
@@ -104,16 +126,26 @@ fun ParkingScreen(
             }
 
             item(key = "park-picker") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Park", style = MaterialTheme.typography.titleSmall)
-                    // Full names: "EP" is unreadable when you are tired and holding a churro.
-                    Park.entries.forEach { park ->
-                        FilterChip(
-                            selected = form.park == park,
-                            onClick = { viewModel.setPark(park) },
-                            label = { Text(park.displayName) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionLabel("Park")
+                    Resort.entries.forEach { resort ->
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = resort.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            // Two per row: four full park names will not fit across a
+                            // phone, and shortening them is what made this awkward before.
+                            Park.entries.filter { it.resort == resort }.chunked(2).forEach { pair ->
+                                FusedToggleRow(
+                                    options = pair,
+                                    selected = form.park,
+                                    label = { it.pickerLabel() },
+                                    onSelect = viewModel::setPark,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -121,22 +153,23 @@ fun ParkingScreen(
             val groups = viewModel.lotGroups(form.park)
             if (groups.isNotEmpty()) {
                 item(key = "lot-picker") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Section", style = MaterialTheme.typography.titleSmall)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SectionLabel("Section")
                         groups.forEach { group ->
-                            group.name?.let {
-                                Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                group.lots.forEach { lot ->
-                                    FilterChip(
-                                        selected = form.lot.equals(lot, ignoreCase = true),
-                                        onClick = { viewModel.setLot(lot) },
-                                        label = { Text(lot) },
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                group.name?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                group.lots.balancedRows().forEach { row ->
+                                    FusedToggleRow(
+                                        options = row,
+                                        selected = form.lot.takeIf { it.isNotBlank() },
+                                        label = { it },
+                                        onSelect = viewModel::setLot,
                                     )
                                 }
                             }
@@ -145,48 +178,39 @@ fun ParkingScreen(
                 }
             }
 
-            item(key = "form") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = form.lot,
-                        onValueChange = viewModel::setLot,
-                        label = { Text("Section") },
-                        placeholder = { Text("Or type one") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    if (viewModel.hasLevels(form.park)) {
-                        Text(
-                            text = "Level",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (viewModel.hasLevels(form.park)) {
+                item(key = "level-picker") {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SectionLabel("Level")
+                        FusedToggleRow(
+                            options = ParkingLots.GARAGE_LEVELS,
+                            selected = form.level.takeIf { it.isNotBlank() },
+                            label = { it },
+                            onSelect = viewModel::setLevel,
                         )
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ParkingLots.GARAGE_LEVELS.forEach { level ->
-                                FilterChip(
-                                    selected = form.level == level,
-                                    onClick = { viewModel.setLevel(level) },
-                                    label = { Text(level) },
-                                )
-                            }
-                        }
                     }
+                }
+            }
 
+            item(key = "row") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionLabel("Row")
                     OutlinedTextField(
                         value = form.row,
                         onValueChange = viewModel::setRow,
-                        label = { Text("Row") },
                         placeholder = { Text("201") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(rowRequester)
+                            // Scroll the field clear of the keyboard as it opens, rather
+                            // than leaving it behind the IME.
+                            .onFocusChanged { focus ->
+                                if (focus.isFocused) scope.launch { rowRequester.bringIntoView() }
+                            },
                     )
 
-                    // Disney publishes lot names but not row ranges, so there is no honest
-                    // fixed list to offer. Remembering what was actually used makes the
-                    // repeat case one tap without inventing rows that may not exist.
                     if (recentRows.isNotEmpty()) {
                         Text(
                             text = "Rows you've used in ${form.lot}",
@@ -203,30 +227,38 @@ fun ParkingScreen(
                             }
                         }
                     }
+                }
+            }
 
-                    OutlinedTextField(
-                        value = form.note,
-                        onValueChange = viewModel::setNote,
-                        label = { Text("Note (optional)") },
-                        placeholder = { Text("Near the tram stop") },
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+            item(key = "note") {
+                OutlinedTextField(
+                    value = form.note,
+                    onValueChange = viewModel::setNote,
+                    label = { Text("Note (optional)") },
+                    placeholder = { Text("Near the tram stop") },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
-                    if (form.canSave) {
+            item(key = "save") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AnimatedVisibility(
+                        visible = form.canSave,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
                         Text(
-                            text = "Saving: ${form.lot.ifBlank { "—" }} ${form.signRow()}".trim(),
+                            text = "Saving: ${listOf(form.lot, form.signRow()).filter { it.isNotBlank() }.joinToString(" ")}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-
                     Button(
                         onClick = {
                             // A focused text field keeps painting its own IME buffer, so
                             // clearing the form underneath leaves the old row visible over
-                            // empty state — it looks entered, and saving again records
-                            // nothing. Ending the input session makes the field re-read.
+                            // empty state. Ending the session makes the field re-read.
                             focusManager.clearFocus()
                             keyboard?.hide()
                             viewModel.save()
@@ -241,9 +273,7 @@ fun ParkingScreen(
 
             val past = history.filterNot { it.isActive }
             if (past.isNotEmpty()) {
-                item(key = "history-header") {
-                    Text("Earlier", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-                }
+                item(key = "history-header") { SectionLabel("Earlier") }
                 items(past, key = { it.id }) { record ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(Modifier.weight(1f)) {
@@ -260,6 +290,17 @@ fun ParkingScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, style = MaterialTheme.typography.titleSmall)
+}
+
+/** The resort header already says which resort, so the park name does not repeat it. */
+private fun Park.pickerLabel(): String = when (this) {
+    Park.UNIVERSAL_STUDIOS_FLORIDA -> "Universal Studios"
+    else -> displayName
 }
 
 @Composable

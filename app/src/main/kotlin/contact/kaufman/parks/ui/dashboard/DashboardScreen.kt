@@ -45,11 +45,18 @@ fun DashboardScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val parking by viewModel.activeParking.collectAsStateWithLifecycle()
     val visibleParks by viewModel.visibleParks.collectAsStateWithLifecycle()
+    val temperatureUnit by viewModel.temperatureUnit.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { DashboardTopBar(scrollBehavior, onSettingsClick) },
+        topBar = {
+            DashboardTopBar(
+                scrollBehavior = scrollBehavior,
+                onSettingsClick = onSettingsClick,
+                weather = { ResortWeatherStrip(state.resortWeather, temperatureUnit) },
+            )
+        },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,

@@ -71,6 +71,9 @@ class ParkDetailViewModel @AssistedInject constructor(
             _state.update { it.copy(snapshot = cached, weather = cached.weather, isLoading = false) }
         }
         load(force = false)
+        // Opening a park screen is the intent to see its weather; making it a second tap
+        // was needless. The repository throttles the actual fetch.
+        loadWeather()
     }
 
     fun refresh() = load(force = true)
@@ -87,6 +90,7 @@ class ParkDetailViewModel @AssistedInject constructor(
      */
     fun loadWeather() {
         if (_state.value.isLoadingWeather) return
+        if (_state.value.weather != null) return
         viewModelScope.launch {
             _state.update { it.copy(isLoadingWeather = true) }
             val weather = repository.weather(park)

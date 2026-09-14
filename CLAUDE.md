@@ -141,6 +141,30 @@ Two traps already hit:
   ignores every date parameter. There is no deep backfill to be had.
 - WDW schedules also carry Lightning Lane pricing and availability under `purchases`.
 
+## Weather
+- Fetched when a screen that shows it appears — the dashboard header on open, a park screen
+  on open. **Never in the background**, and cached per location for
+  `WEATHER_FRESH_FOR_SECONDS` (15 min) so bouncing between parks does not hammer Open-Meteo.
+- The dashboard reads one resort-wide point near **Bay Lake**, central to WDW property.
+  Open-Meteo is point-based so there is no "Walt Disney World" location; the four parks are
+  within ~5 miles, which is inside the noise of an afternoon storm.
+- A failed refresh returns the **last cached reading** rather than null, so the strip never
+  blanks on a flaky connection.
+
+## Parking screen
+- Every picker is a **fused Material 3 Expressive button group** (`ui/parking/FusedButtons.kt`)
+  — park, section, garage level. Each step is a pick-exactly-one, which is what a connected
+  group communicates and a row of detached chips does not.
+- Rows are balanced (`balancedRows`), never a plain `chunked(3)`: four options as 3+1 leaves
+  a lone full-width button that reads as a layout bug.
+- **There is no free-text section field.** The posted lot names are the only ones that
+  exist; anything unusual belongs in the note. Removing it was a deliberate call — the
+  trade is that a stale `ParkingLots` table now blocks picking a renamed lot, so keep that
+  table current.
+- `Modifier.imePadding()` plus a `BringIntoViewRequester` on the row field. Under
+  edge-to-edge, `adjustResize` alone does **not** resize a Compose window, so without both
+  the keyboard draws straight over the field being typed into.
+
 ## Parking lot data
 - A recorded spot **expires at 4AM park time**, not midnight (`domain/ParkingDay.kt`).
   Magic Kingdom's hard-ticket nights run to midnight and EPCOT's Extended Evening to 11PM,
