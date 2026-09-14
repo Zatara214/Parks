@@ -71,6 +71,19 @@ jobs:
           ./gradlew :app:assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk "parks-${{ steps.ver.outputs.name }}.apk"
 
+      - name: Verify the release is not debug-signed
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # The build falls back to the debug key when signing config is missing, which
+          # would publish an APK that no properly-signed update can ever replace.
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          CERTS=$("$APKSIGNER" verify --print-certs "parks-${{ steps.ver.outputs.name }}.apk")
+          echo "$CERTS"
+          if grep -q "CN=Android Debug" <<< "$CERTS"; then
+            echo "::error::Release APK is debug-signed — signing secrets did not apply."
+            exit 1
+          fi
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2

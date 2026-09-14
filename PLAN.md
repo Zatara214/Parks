@@ -69,6 +69,12 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 - [ ] Trip history — what was ridden, and when.
 - [ ] Resorts, if it ever seems worth it.
 
+## Known nuances
+- A park can read "6 · Above average" while its sub-line says "About usual". These are two
+  different aggregations: the 1-10 level is the mean of the *ride ranks* (the WDW Passport
+  method), while the "vs usual" line is the mean of the per-ride *ratios*. Both are honest;
+  worth revisiting if the pairing reads as contradictory in practice.
+
 ## Open questions
 - **Epic Universe baselines are provisional.** The park opened May 2025 and has not settled
   into a normal year, so its seeds are the least trustworthy in the table and should be the

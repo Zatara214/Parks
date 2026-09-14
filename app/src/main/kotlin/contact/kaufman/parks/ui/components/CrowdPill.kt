@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import contact.kaufman.parks.domain.CrowdReading
 import contact.kaufman.parks.ui.theme.crowdColor
+import kotlin.math.roundToInt
 
 /**
  * The crowd level as a single glanceable chip.
@@ -53,7 +54,10 @@ fun CrowdPill(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = level.toInt().coerceIn(1, 10).toString(),
+                // Must round, not truncate: the label beside it comes from
+                // `reading.level`, which is already rounded, so truncating here renders
+                // a 5.6 as "5 · Above average".
+                text = level.roundToInt().coerceIn(1, 10).toString(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = onColor,
