@@ -122,6 +122,11 @@ interface ParkingDao {
     @Query("UPDATE parking_records SET isActive = 0 WHERE isActive = 1")
     suspend fun clearActive()
 
+    /** Retires spots from a previous parking day. They stay in history, they just stop
+     *  being the current one. */
+    @Query("UPDATE parking_records SET isActive = 0 WHERE isActive = 1 AND parkedAtEpochSeconds < :cutoffEpochSeconds")
+    suspend fun expireActiveBefore(cutoffEpochSeconds: Long): Int
+
     @Insert
     suspend fun insert(record: ParkingRecordEntity): Long
 

@@ -129,6 +129,13 @@ Two traps already hit:
 - WDW schedules also carry Lightning Lane pricing and availability under `purchases`.
 
 ## Parking lot data
+- A recorded spot **expires at 4AM park time**, not midnight (`domain/ParkingDay.kt`).
+  Magic Kingdom's hard-ticket nights run to midnight and EPCOT's Extended Evening to 11PM,
+  so a car parked at 9PM is still parked at 12:30AM. The rollover is computed by stepping
+  a **calendar day**, never by subtracting 24 hours — the two DST days are 23 and 25 hours
+  long and a fixed subtraction lands an hour off on exactly those mornings. Tests pin both.
+- Expiry is evaluated **on read** (plus an idempotent `expireStale()` on screens that show
+  parking), not scheduled: no wake-ups, no battery cost, still correct if the phone was off.
 - `domain/ParkingLots.kt` is a **curated table** — themeparks.wiki has no parking data.
   Verified 2026-09-14 against Disney Parks Blog, Universal's app listings and on-site photo
   coverage. Resorts rename lots (EPCOT's were replaced wholesale in January 2023), so a

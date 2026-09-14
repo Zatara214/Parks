@@ -3,7 +3,9 @@ package contact.kaufman.parks.data.repo
 import contact.kaufman.parks.data.db.ParkingDao
 import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.ParkingDay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Clock
@@ -12,7 +14,22 @@ import kotlin.time.Clock
 class ParkingRepository @Inject constructor(
     private val dao: ParkingDao,
 ) {
-    fun active(): Flow<ParkingRecordEntity?> = dao.active()
+    /**
+     * The current spot, or null once the parking day has rolled over.
+     *
+     * Filtered on read as well as expired in the database, so a spot that goes stale
+     * while the app is open disappears on the next emission rather than lingering until
+     * the next launch.
+     */
+    fun active(): Flow<ParkingRecordEntity?> = dao.active().map { record ->
+        record?.takeUnless { ParkingDay.hasExpired(it.parkedAtEpochSeconds, Clock.System.now()) }
+    }
+
+    /** Retire spots from previous days. Cheap, idempotent, and safe to call on every
+     *  screen that shows parking. */
+    suspend fun expireStale() {
+        dao.expireActiveBefore(ParkingDay.mostRecentRollover(Clock.System.now()).epochSeconds)
+    }
 
     fun history(): Flow<List<ParkingRecordEntity>> = dao.history()
 

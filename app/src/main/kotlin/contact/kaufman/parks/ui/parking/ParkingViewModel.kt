@@ -46,6 +46,10 @@ class ParkingViewModel @Inject constructor(
     private val repository: ParkingRepository,
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch { repository.expireStale() }
+    }
+
     private val _form = MutableStateFlow(ParkingFormState())
     val form: StateFlow<ParkingFormState> = _form.asStateFlow()
 

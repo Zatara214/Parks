@@ -51,6 +51,11 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 - [ ] Filter rides by land — needs land data, which `/children` does not carry. Would have
       to be derived from each ride's lat/long.
 
+- [x] **Parking resets overnight** — a spot retires at 4AM park time, not midnight: hard
+      ticket nights run to midnight and Extended Evening to 11PM, so a car parked at 9PM is
+      still parked at 12:30AM. Evaluated on read rather than scheduled, so there is no
+      background job and it stays correct if the phone was off at 4AM.
+
 **Phase 1 complete.**
 
 ### Phase 2 — depth

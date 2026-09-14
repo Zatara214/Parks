@@ -29,7 +29,7 @@ data class DashboardUiState(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val parks: ParksRepository,
-    parking: ParkingRepository,
+    private val parkingRepository: ParkingRepository,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -42,10 +42,12 @@ class DashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
-    val activeParking: StateFlow<ParkingRecordEntity?> = parking.active()
+    val activeParking: StateFlow<ParkingRecordEntity?> = parkingRepository.active()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
+        // Yesterday's spot should not still be pinned this morning.
+        viewModelScope.launch { parkingRepository.expireStale() }
         load(force = false)
     }
 
