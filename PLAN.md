@@ -66,9 +66,11 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       than anything forecast.
 - [ ] Wait-time history chart per ride, from the samples already being recorded.
 - [ ] Lightning Lane pricing and availability from the schedule `purchases` array.
-- [ ] Hand-off to the official apps: deep-link to Disney Parks / Universal FL for anything
-      that needs a real account — mobile order, ticket scanning, virtual queues. Manifest
-      `<queries>` entries are already in place.
+- [x] **Hand-off to the official apps** — an action on every park screen, plus an explicit
+      card on the Dining tab where mobile order actually lives. Launches the installed app,
+      or its Play Store listing. Only the launcher entry point is used: both apps surely
+      have internal deep links, but none are documented, and an undocumented scheme that
+      silently breaks is worse than one extra tap.
 - [ ] Nearest-ride / "which park am I in" using the lat/long every entity carries.
 
 ### Phase 3 — nice to have

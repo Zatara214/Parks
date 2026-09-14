@@ -114,6 +114,18 @@ Two traps already hit:
   queues taper at close. That is real, not a bug, but it does mean the advice reads
   similarly across many rides on the same evening.
 
+## Hand-off to the official apps
+- `ui/components/OfficialApps.kt`. Package names verified against the Play Store listings
+  2026-09-14: `com.disney.wdw.android`, `com.universalstudios.orlandoresort`. Both are
+  declared in the manifest `<queries>` — without that, Android 11+ reports every app as
+  missing and the hand-off would always fall through to the store.
+- **Launcher entry point only.** Both apps almost certainly have internal deep links to
+  mobile order or a specific restaurant, but none are documented; an undocumented scheme
+  that silently stops working is worse than one extra tap.
+- Falls back `market://` then the Play Store web URL then a toast. The emulator image has
+  no Play Store, so the web branch is the one exercised there — the direct-launch branch
+  can only be verified on a device that actually has the app.
+
 ## Conventions
 - Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
 - Expressive opt-ins are set once in `app/build.gradle.kts`, not per call site.

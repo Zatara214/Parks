@@ -3,7 +3,9 @@ package contact.kaufman.parks.ui.park
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,8 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,11 +35,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.Resort
+import contact.kaufman.parks.ui.components.OfficialApps
 import contact.kaufman.parks.ui.components.CrowdPill
 import contact.kaufman.parks.ui.components.formatHoursRange
 
@@ -50,6 +60,7 @@ fun ParkDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val temperatureUnit by viewModel.temperatureUnit.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -63,6 +74,12 @@ fun ParkDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { OfficialApps.open(context, park.resort) }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = "Open ${OfficialApps.appName(park.resort)}",
+                        )
+                    }
                     IconButton(onClick = onParkingClick) {
                         Icon(Icons.Default.DirectionsCar, contentDescription = "Parking")
                     }
@@ -137,6 +154,15 @@ fun ParkDetailScreen(
                     }
                 }
 
+                if (state.tab == ParkTab.DINING) {
+                    item(key = "dining-handoff") {
+                        HandOffCard(
+                            resort = park.resort,
+                            onOpen = { OfficialApps.open(context, park.resort) },
+                        )
+                    }
+                }
+
                 if (entities.isEmpty()) {
                     item(key = "empty") {
                         Text(
@@ -200,4 +226,46 @@ private fun emptyMessage(state: ParkDetailUiState): String = when {
         "Universal doesn't publish live dining status."
     state.hideClosed -> "Nothing open right now. Turn off \"Open only\" to see everything."
     else -> "No data for this park yet."
+}
+
+/**
+ * Says plainly that ordering happens in the resort's own app, and gets you there.
+ *
+ * Mobile order needs a logged-in session against Disney's or Universal's systems; Parks
+ * has no business holding those credentials. Naming the limit is better than leaving
+ * someone hunting for a button that was never going to exist.
+ */
+@Composable
+private fun HandOffCard(resort: Resort, onOpen: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
+        Column(
+            Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Ordering and reservations",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Mobile order and dining reservations need your ${OfficialApps.appName(resort)} account.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            FilledTonalButton(onClick = onOpen) {
+                Icon(
+                    Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text("Open ${OfficialApps.appName(resort)}")
+            }
+        }
+    }
 }
