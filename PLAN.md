@@ -73,6 +73,22 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       silently breaks is worse than one extra tap.
 - [ ] Nearest-ride / "which park am I in" using the lat/long every entity carries.
 
+### Phase 2.5 — parking by geofence (Zak's request, 2026-09-14)
+Once "which park am I in" works, the same trick should fill in the parking section, leaving
+only the row to enter by hand.
+
+- Lots do not move, so hardcoded polygons are fine. Zak has offered to trace them from
+  OpenStreetMap if nothing usable exists; worth checking OSM first, since Disney and
+  Universal lots are mapped as `amenity=parking` areas and some carry section names already.
+- Point-in-polygon is a dozen lines (ray casting), so the work is entirely in sourcing and
+  checking the shapes, not the maths.
+- **A geofence cannot give you the garage level.** Universal's number encodes level in its
+  first digit ("Cat in the Hat 457" = level 4, row 57), and GPS has no usable vertical
+  resolution inside a concrete deck. Level stays a manual pick there.
+- Section polygons at EPCOT and Magic Kingdom are large and well separated, so this should
+  be reliable at those. The tighter question is Universal's two garages, which sit almost
+  on top of each other.
+
 ### Phase 3 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.
 - [ ] Notify when a watched ride drops below a wait threshold.

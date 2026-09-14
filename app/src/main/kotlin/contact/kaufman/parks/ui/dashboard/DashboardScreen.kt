@@ -15,7 +15,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +50,24 @@ fun DashboardScreen(
     val parking by viewModel.activeParking.collectAsStateWithLifecycle()
     val visibleParks by viewModel.visibleParks.collectAsStateWithLifecycle()
     val temperatureUnit by viewModel.temperatureUnit.collectAsStateWithLifecycle()
+
+    // Asked once, on first open. Granting it only ever saves a tap — every screen works
+    // without it, so a refusal is final and never nagged about again.
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted ->
+        if (granted.values.any { it }) viewModel.detectPark()
+    }
+    LaunchedEffect(Unit) {
+        if (!viewModel.hasLocationPermission()) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        }
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -82,6 +104,7 @@ fun DashboardScreen(
                     parking = parking,
                     onParkClick = onParkClick,
                     onParkingClick = onParkingClick,
+                    youAreHere = state.youAreHere,
                 )
             }
         }
@@ -94,6 +117,7 @@ private fun ParkList(
     parking: ParkingRecordEntity?,
     onParkClick: (Park) -> Unit,
     onParkingClick: () -> Unit,
+    youAreHere: Park?,
 ) {
     val byResort = snapshots.groupBy { it.park.resort }
 
@@ -120,6 +144,7 @@ private fun ParkList(
                     snapshot = snapshot,
                     onClick = { onParkClick(snapshot.park) },
                     modifier = Modifier.animateItem(),
+                    youAreHere = snapshot.park == youAreHere,
                 )
             }
         }

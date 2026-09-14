@@ -126,6 +126,23 @@ Two traps already hit:
   no Play Store, so the web branch is the one exercised there — the direct-launch branch
   can only be verified on a device that actually has the app.
 
+## Location
+- `data/location/LocationProvider.kt` uses the **platform `LocationManager`**, not Play
+  Services' fused client: no Google dependency, which is the point of this app. Single fix
+  on request only — there is no continuous-updates path and there should not be.
+- **`getCurrentLocation` needs a timeout.** It is documented to always call back, but a
+  cold GPS indoors (or a wedged emulator) simply never answers, and without
+  `withTimeoutOrNull` the caller suspends forever and the feature looks dead rather than
+  unavailable. This was a real hang, found on device.
+- `Geo.parkAt()` compares against park **centres**, which is crude. Magic Kingdom and EPCOT
+  are miles apart and safe; **Universal Studios and Islands of Adventure share a wall** and
+  their centres are under 1km apart, so a poor fix near the boundary can pick the wrong
+  one. A test pins that distance so the tightness is never a surprise. Real polygons would
+  settle it — see the parking-geofence section of PLAN.md.
+- **Emulator caveat:** changing the emulator's system clock wedges its GPS backend, after
+  which `adb emu geo fix` returns OK and does nothing. If location testing goes dead after
+  a date-change test, restart the AVD rather than debugging the app.
+
 ## Conventions
 - Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
 - Expressive opt-ins are set once in `app/build.gradle.kts`, not per call site.

@@ -1,12 +1,15 @@
 package contact.kaufman.parks.ui.dashboard
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.data.repo.ParkingRepository
+import contact.kaufman.parks.data.location.LocationProvider
 import contact.kaufman.parks.data.prefs.SettingsStore
 import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
+import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
@@ -22,6 +25,8 @@ import javax.inject.Inject
 
 data class DashboardUiState(
     val resortWeather: ParkWeather? = null,
+    /** The park you appear to be standing in, if location is available and you are. */
+    val youAreHere: Park? = null,
     val snapshots: List<ParkSnapshot> = Park.entries.map { ParkSnapshot(it) },
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -29,10 +34,13 @@ data class DashboardUiState(
     val error: String? = null,
 )
 
+private const val TAG = "DashboardViewModel"
+
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val parks: ParksRepository,
     private val parkingRepository: ParkingRepository,
+    private val location: LocationProvider,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -57,6 +65,31 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch { parkingRepository.expireStale() }
         load(force = false)
         loadResortWeather()
+        detectPark()
+    }
+
+    fun hasLocationPermission(): Boolean = location.hasPermission()
+
+    /**
+     * Works out which park you are in, once, on open.
+     *
+     * Silent when permission is missing or location is off — this is a convenience that
+     * saves a tap, never something to nag about.
+     */
+    fun detectPark() {
+        viewModelScope.launch {
+            val fix = location.current()
+            if (fix == null) {
+                Log.d(TAG, "no location fix (permission off, location off, or no provider)")
+                return@launch
+            }
+            val park = Geo.parkAt(fix.latitude, fix.longitude)
+            // Worth keeping: the difference between "no fix" and "a fix, but nowhere near
+            // a park" is the first thing to check when this feature seems dead, and the
+            // two look identical from the UI.
+            Log.d(TAG, "fix ${fix.latitude},${fix.longitude} (${fix.provider}) -> ${park?.displayName ?: "no park"}")
+            _state.value = _state.value.copy(youAreHere = park)
+        }
     }
 
     /**
