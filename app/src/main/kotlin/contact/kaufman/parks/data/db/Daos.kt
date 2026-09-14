@@ -101,6 +101,24 @@ interface ParkingDao {
     @Query("SELECT * FROM parking_records ORDER BY parkedAtEpochSeconds DESC LIMIT :limit")
     fun history(limit: Int = 50): Flow<List<ParkingRecordEntity>>
 
+    /**
+     * Rows previously used in this lot, most recent first.
+     *
+     * Disney publishes lot names but not row ranges, so there is no honest fixed list to
+     * offer. Remembering what was actually typed turns the common case — the same few
+     * spots, over and over — into one tap, without inventing rows that may not exist.
+     */
+    @Query(
+        """
+        SELECT `row` FROM parking_records
+        WHERE parkId = :parkId AND lot = :lot AND `row` != ''
+        GROUP BY `row`
+        ORDER BY MAX(parkedAtEpochSeconds) DESC
+        LIMIT :limit
+        """
+    )
+    fun recentRows(parkId: String, lot: String, limit: Int = 6): Flow<List<String>>
+
     @Query("UPDATE parking_records SET isActive = 0 WHERE isActive = 1")
     suspend fun clearActive()
 

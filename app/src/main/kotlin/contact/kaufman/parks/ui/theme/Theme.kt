@@ -27,7 +27,7 @@ private val DarkScheme = darkColorScheme(
 @Composable
 fun ParksTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    /** minSdk is 31, so dynamic colour is always available — the flag exists for the
+    /** minSdk is 31, so dynamic color is always available — the flag exists for the
      *  settings toggle and for screenshot tests that need a stable palette. */
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,

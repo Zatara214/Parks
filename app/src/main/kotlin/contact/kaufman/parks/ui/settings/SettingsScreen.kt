@@ -65,7 +65,7 @@ fun SettingsScreen(
 
             item(key = "dynamic") {
                 ListItem(
-                    headlineContent = { Text("Dynamic colour") },
+                    headlineContent = { Text("Dynamic color") },
                     supportingContent = { Text("Take the palette from your wallpaper") },
                     trailingContent = {
                         Switch(
@@ -132,7 +132,7 @@ fun SettingsScreen(
 
             item(key = "about") {
                 ListItem(
-                    headlineContent = { Text("Open-source licences") },
+                    headlineContent = { Text("Open-source licenses") },
                     supportingContent = { Text("What Parks is built on, and where its data comes from") },
                     modifier = Modifier.clickable(onClick = onAboutClick),
                 )

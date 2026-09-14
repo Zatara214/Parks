@@ -3,9 +3,9 @@ package contact.kaufman.parks.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Fallback palette for when dynamic colour is turned off.
+ * Fallback palette for when dynamic color is turned off.
  *
- * Warm twilight blue and a sodium-lamp gold — the colours of a park at closing time,
+ * Warm twilight blue and a sodium-lamp gold — the colors of a park at closing time,
  * rather than either resort's branding.
  */
 val ParksBlue = Color(0xFF1B3A5C)
@@ -29,7 +29,7 @@ fun crowdColor(level: Int): Color = when (level.coerceIn(1, 10)) {
     else -> CrowdPacked
 }
 
-/** Wait-time colouring uses the same ramp so a 60-minute wait and a level-8 park read
+/** Wait-time coloring uses the same ramp so a 60-minute wait and a level-8 park read
  *  as the same kind of bad. */
 fun waitColor(minutes: Int): Color = when {
     minutes <= 15 -> CrowdVeryLight

@@ -102,9 +102,9 @@ Two traps already hit:
 - A reading needs at least 3 watched rides open. Fewer than that is a rumour, not a level.
 
 ## Conventions
-- Compose only, Material 3 Expressive, dynamic colour on, edge-to-edge, predictive back.
+- Compose only, Material 3 Expressive, dynamic color on, edge-to-edge, predictive back.
 - Expressive opt-ins are set once in `app/build.gradle.kts`, not per call site.
-- Crowd and wait colours share one cool→warm ramp (`ui/theme/Color.kt`). Deliberately not
+- Crowd and wait colors share one cool→warm ramp (`ui/theme/Color.kt`). Deliberately not
   red/green: a busy park is not an "error".
 - Park entity IDs are themeparks.wiki UUIDs, hardcoded in `domain/Parks.kt` and
   `data/crowd/CrowdSeed.kt`. If one goes stale the ride simply drops out of the average —
@@ -127,6 +127,20 @@ Two traps already hit:
 - `/entity/{id}/history` exists and works, but it is a **rolling ~48-hour window only** and
   ignores every date parameter. There is no deep backfill to be had.
 - WDW schedules also carry Lightning Lane pricing and availability under `purchases`.
+
+## Parking lot data
+- `domain/ParkingLots.kt` is a **curated table** — themeparks.wiki has no parking data.
+  Verified 2026-09-14 against Disney Parks Blog, Universal's app listings and on-site photo
+  coverage. Resorts rename lots (EPCOT's were replaced wholesale in January 2023), so a
+  section missing from the chips is a data-staleness bug, not a mystery. Every field stays
+  free-text so a stale table can never block recording a spot.
+- **Universal's garages encode the level into the posted number**: "Cat in the Hat 457" is
+  level 4, row 57. That is why those two parks get a separate level picker and the rest
+  do not — `ParkingLots.hasLevels()`.
+- Row *ranges* per section are not published anywhere verifiable, so there is no fixed row
+  dropdown. Rows previously used in a lot are offered as chips instead, learned from the
+  user's own history (`ParkingDao.recentRows`).
+- **US English throughout the UI** — "color", not "colour"; "license", not "licence".
 
 ## Driving the emulator
 - **Grassfed runs in a freeform floating window on this AVD** (roughly `Rect(329, 830 -

@@ -45,7 +45,7 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       end to end on-device, survives a restart.
 - [x] **Weather on the park screen** — behind a "Check" tap, never fetched automatically.
       Shows feels-like (the number that matters in Orlando) and the next hours of rain chance.
-- [x] **Settings** — dynamic colour, light/dark/system, temperature unit, and which parks
+- [x] **Settings** — dynamic color, light/dark/system, temperature unit, and which parks
       appear on the dashboard. Plus an About screen with the generated licence list.
       Hiding every park is refused: it would leave a blank dashboard with no way back.
 - [ ] Filter rides by land — needs land data, which `/children` does not carry. Would have

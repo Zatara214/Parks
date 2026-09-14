@@ -16,6 +16,8 @@ class ParkingRepository @Inject constructor(
 
     fun history(): Flow<List<ParkingRecordEntity>> = dao.history()
 
+    fun recentRows(park: Park, lot: String): Flow<List<String>> = dao.recentRows(park.id, lot)
+
     suspend fun park(
         park: Park,
         lot: String,

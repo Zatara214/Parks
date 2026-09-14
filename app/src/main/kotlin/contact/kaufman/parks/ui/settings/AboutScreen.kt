@@ -23,7 +23,7 @@ import androidx.compose.runtime.getValue
 import contact.kaufman.parks.R
 
 /**
- * The dependency licence list, generated at build time by the AboutLibraries plugin.
+ * The dependency license list, generated at build time by the AboutLibraries plugin.
  * Kept honest rather than hand-maintained: GPLv3 obliges us to say what we ship.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +35,7 @@ fun AboutScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Open-source licences") },
+                title = { Text("Open-source licenses") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -47,11 +47,11 @@ fun AboutScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         LibrariesContainer(
             libraries,
             modifier = Modifier.fillMaxSize().padding(padding),
-            // v15 tints each licence badge by a hue derived from the licence name.
+            // v15 tints each license badge by a hue derived from the license name.
             // Under a dynamic palette that lands as pale-mint text on a pale-mint chip
             // in light theme, and neither `licenseChipColors` nor ContrastLevel.High
             // fixes it — the hue resolver wins. Switching the tinting off entirely
-            // falls back to the theme's own badge colours, which are contrast-checked.
+            // falls back to the theme's own badge colors, which are contrast-checked.
             variantColors = LibraryDefaults.m3VariantColors(
                 contrastLevel = ContrastLevel.High,
                 licenseHueResolver = LicenseHueResolver.None,
