@@ -12,19 +12,33 @@ language and proactively suggest workflow improvements. Roadmap and open decisio
 2. Read `PLAN.md` for the current milestone.
 
 ## Build & verify
-- Build: `./gradlew :app:assembleDebug` (JDK 17, SDK at `~/Android/Sdk`).
+**The development machine is the arm64 Mac** (since 2026-09-14). The Linux box that built
+v0.1.0-v0.3.0 is retired; anything below labelled Linux is kept only as history, and must
+be re-verified before being trusted here.
+
+- Build: `./gradlew :app:assembleDebug`. JDK 17, SDK at `~/Library/Android/sdk`.
 - Tests: `./gradlew :app:testDebugUnitTest`. The crowd model is the part with real logic
   in it, so it has real tests — keep them passing.
-- **An emulator works on this host** (unlike the LubeLogger project's notes, which predate
-  the BIOS fix). `Pixel_9_Pro_CLI` authorizes adb without a tap:
+- **`JAVA_HOME` and `ANDROID_HOME` live in `~/.zshenv`, not `~/.zshrc`.** This matters:
+  zsh reads `.zshrc` only for *interactive* shells, so anything scripted or tool-driven
+  got a stale system JDK 11 and died on `Bad CPU type in executable` (that JDK is x86 and
+  this Mac is arm64). Keep toolchain exports in `.zshenv` and they apply everywhere.
+- **The emulator works here, and the Linux caveats do not apply** (verified 2026-09-14):
   ```
-  emulator -avd Pixel_9_Pro_CLI -no-window -no-audio -no-boot-anim -gpu host &
+  emulator -avd Pixel_9_Pro -no-window -no-audio -no-boot-anim &
   adb wait-for-device
   adb install -r app/build/outputs/apk/debug/app-debug.apk
   adb shell am start -n contact.kaufman.parks.debug/contact.kaufman.parks.MainActivity
   adb exec-out screencap -p > /tmp/shot.png
   ```
-  **Always launch with `-gpu host`** — the default swiftshader backend segfaults here.
+  The AVD is `Pixel_9_Pro` (**not** `Pixel_9_Pro_CLI`, which was the Linux box's). It boots
+  in about 20 seconds, authorizes adb **without a tap**, and needs **no `-gpu host`** — the
+  default backend is fine. `-gpu host` was a workaround for a swiftshader segfault on the
+  Bazzite host only.
+- The app requests location on first launch. Skip the dialog in scripted runs with
+  `adb shell pm grant contact.kaufman.parks.debug android.permission.ACCESS_FINE_LOCATION`
+  (and `ACCESS_COARSE_LOCATION`), then force-stop and relaunch.
+- macOS has no `timeout(1)`. Poll `adb shell getprop sys.boot_completed` in a loop instead.
 - Screenshot previews also exist via `./gradlew updateDebugScreenshotTest`.
 - Zak installs releases via Obtainium from GitHub Releases. He does not use ADB.
 
@@ -242,17 +256,17 @@ Two traps already hit:
 - **US English throughout the UI** — "color", not "colour"; "license", not "licence".
 
 ## Driving the emulator
-- **Grassfed runs in a freeform floating window on this AVD** (roughly `Rect(329, 830 -
-  952, 2110)`). Taps aimed at Parks inside that rect land in Grassfed instead, which looks
-  exactly like Parks navigating somewhere wrong. `adb shell pm disable-user --user 0
-  com.grassfed` before a tap-driven run, and **re-enable it afterwards**.
-- `input keyevent 111` (ESCAPE) exits the app here rather than just closing the keyboard —
-  use `keyevent 4` (BACK) to dismiss it.
 - Re-installing resets the nav stack, so scripted tap sequences must start from the
   dashboard. Check `dumpsys activity activities | grep ResumedActivity:` between steps
-  rather than assuming a tap landed.
+  rather than assuming a tap landed. This one is general and still holds.
+- Carried over from the Linux box and **not yet re-checked on the Mac** — re-verify before
+  relying on either:
+  - `input keyevent 111` (ESCAPE) exited the app rather than closing the keyboard; BACK
+    (`keyevent 4`) was the safe way to dismiss it.
+  - Grassfed ran in a freeform floating window on that AVD and swallowed taps aimed at
+    Parks. Grassfed is not installed on this Mac's `Pixel_9_Pro`, so this should be moot.
 
-## Working on a different machine
+## Setting up a new machine
 A fresh clone does **not** build signed releases, and three things have to be carried over
 by hand because none of them belong in git:
 
@@ -265,10 +279,14 @@ by hand because none of them belong in git:
 3. **JDK 17 and Android SDK platform 37.2** must be present. The build pins
    `jvmToolchain(17)`, so a newer default JDK is fine as long as 17 is installed.
 
-The emulator notes further down are **Linux-specific**. `-gpu host` is a workaround for a
-swiftshader segfault on the Bazzite host; on macOS the default backend is normally fine,
-and the Grassfed-window and clock-wedges-GPS caveats will not apply. Re-verify rather than
-trusting them.
+**Status of the current Mac (2026-09-14):** items 2 and 3 are done — `local.properties`
+points at `~/Library/Android/sdk`, and JDK 17 plus platform 37.2 are installed. Item 1 is
+**outstanding**: `~/.config/parks/` does not exist here, so a local release build would be
+debug-signed. Tagging still cuts a correct release, because CI signs from GitHub secrets —
+but copy the keystore over before ever building a release APK by hand.
+
+The `-gpu host` flag and the swiftshader segfault it worked around were **Bazzite-only**;
+the emulator section above records what has since been confirmed on macOS.
 
 ## Secrets and release identity
 - Release keystore lives in `~/.config/parks/keystore.properties` (outside the repo) and as

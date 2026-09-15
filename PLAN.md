@@ -75,7 +75,11 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       or its Play Store listing. Only the launcher entry point is used: both apps surely
       have internal deep links, but none are documented, and an undocumented scheme that
       silently breaks is worse than one extra tap.
-- [ ] Nearest-ride / "which park am I in" using the lat/long every entity carries.
+- [x] **"Which park am I in"** — `Geo.parkAt()` matches a GPS fix against park centres and
+      pins that park to the top of the dashboard (shipped in v0.3.0). Centres are crude:
+      USF and IOA share a wall and sit under 1km apart, so a poor fix near that boundary can
+      pick the wrong one. A test pins the distance so the tightness stays visible.
+- [ ] Nearest *ride* using the lat/long every entity carries — still to do.
 
 ### Phase 2.5 — parking by geofence (Zak's request, 2026-09-14)
 Once "which park am I in" works, the same trick should fill in the parking section, leaving
