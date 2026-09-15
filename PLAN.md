@@ -58,7 +58,7 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 
 **Phase 1 complete.**
 
-### Phase 2 — depth (complete apart from Lightning Lane)
+### Phase 2 — depth — **complete**
 - [x] **"Best time to ride today"** — tapping a Disney ride expands an hourly forecast bar
       chart with the quietest hour still ahead called out. Universal sends no forecast, so
       those rows are not expandable at all rather than opening an empty chart.
@@ -69,11 +69,9 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       read as different things. Days with fewer than three samples are dropped: one glance
       recorded while walking past is not a day's average. Works at Universal too, which has
       no forecast — those rows become expandable once there is history to show.
-- [ ] Lightning Lane pricing and availability from the schedule `purchases` array.
-      **Verified live 2026-09-15**: Magic Kingdom's schedule carries purchases on 31 of 78
-      entries — per-attraction Single Pass with an `available` flag and a formatted price,
-      plus Multi Pass and Premier Pass packages. `PurchaseDto` is already written and
-      parsed, and nothing reads it, so this is domain and UI work only.
+- Lightning Lane **moved to Phase 4** (Zak, 2026-09-15): he is a local and hardly ever
+      buys them, so the value does not match its position. The research is kept there so
+      nobody redoes it.
 - [x] **Hand-off to the official apps** — an action on every park screen, plus an explicit
       card on the Dining tab where mobile order actually lives. Launches the installed app,
       or its Play Store listing. Only the launcher entry point is used: both apps surely
@@ -131,10 +129,86 @@ big lots are mapped unnamed, so a fix there still fills in the park. These are w
 to OSM upstream rather than hand-tracing into the app — the table is generated from a
 query, so an upstream fix flows straight in.
 
-### Phase 3 — nice to have
+### Phase 3 — trip history (active, Zak's pick 2026-09-15)
+What was ridden, and when. **Local storage is the default and must stay fully functional
+on its own**; Dawarich is an optional enrichment for the one person in a thousand who runs
+one, and the feature cannot depend on it.
+
+#### The problem, and why Dawarich changes it
+Parks **never tracks location in the background** — that is a deliberate, load-bearing
+decision, not an oversight. It takes single fixes when a screen asks. So on its own the app
+can only know what it directly witnessed: a park screen opened, a parking spot recorded, a
+refresh performed. That is a thin trip history.
+
+Zak self-hosts **Dawarich**, which already records his location continuously via the Colota
+app. That is precisely the background tracking Parks refuses to do — except it is on his own
+server, collected with his own consent, for his own reasons. Reading it lets the app
+reconstruct a real trip without becoming a tracker itself.
+
+#### Recommended shape: Dawarich as a *source*, not a store
+- Trip history lives in **local Room tables**. Dawarich is read, never written.
+- Reasons: Dawarich's model is points, visits and places — there is nowhere natural to put
+  "queued 38 minutes for Space Mountain", and inventing custom visits would pollute a
+  location history that exists for other purposes. The local store has to exist anyway for
+  the default case, so making Dawarich a second backing store means two write paths and a
+  sync question for no gain. Read-only also means an **API key that only needs read scope**,
+  and no possibility of this app corrupting his location archive.
+
+#### API facts, read from the Dawarich source 2026-09-15 (Freika/dawarich)
+- `GET /api/v1/points` — auth by `api_key` query parameter **or** `Authorization: Bearer`.
+- Parameters: `start_at`, `end_at` (unix seconds), `order` (`asc`/`desc`), `page`,
+  `per_page` (default 100, max 10,000), and a **bounding box**:
+  `min_latitude`, `max_latitude`, `min_longitude`, `max_longitude`.
+- `slim=true` returns exactly what is needed and little else:
+  `{id, latitude, longitude, timestamp, velocity, country_name, tracker_id}` — coordinates
+  as strings, timestamp as unix seconds. Paging is reported in `X-Current-Page` and
+  `X-Total-Pages` headers.
+- **The bounding box is the important one.** Parks can ask only for points inside a park's
+  own bbox for a single day, so it never requests, receives or stores where Zak was the
+  rest of the time. Privacy-minimal by construction rather than by promise.
+- `GET /api/v1/visits` also exists (`name, status, latitude, longitude, started_at,
+  ended_at`) — Dawarich's own visit detection. Place-level, so useful for "was I at Magic
+  Kingdom that day" but too coarse to name a ride. Points plus our own dwell detection is
+  what gets ride-level detail.
+- Self-hosted instances are exempt from Dawarich's rate limiting, but this should still
+  fetch **on request per day viewed**, not on a schedule — consistent with the rest of the app.
+
+#### Turning points into a trip — the machinery already exists
+- `ParkBoundaries` says which park a point is in, and excludes CityWalk.
+- Every attraction carries a lat/long, and `distanceMetersFrom` already measures to it.
+- **The app's own `wait_samples` are the trick for confidence.** A dwell near a ride only
+  proves you stood there — eating nearby looks the same. But if the dwell length is close to
+  the standby wait posted at that hour, you almost certainly queued. Parks already records
+  those samples every refresh, so it can distinguish "near Space Mountain" from "rode
+  Space Mountain" without guessing.
+
+#### Known limits, to be stated in the UI rather than papered over
+- A dwell is not a ride. Where confidence is low the entry should say "near", not "rode".
+- Attraction coordinates are single points, not queue polygons. Queues run hundreds of
+  metres and an entrance can sit well away from the marker.
+- GPS is poor in a switchback queue surrounded by steel, and worse indoors — the exact
+  places this feature cares about.
+- Colota's sampling interval sets the floor on everything. Sparse points mean short rides
+  vanish entirely.
+
+#### Steps
+- [ ] Local trip history first, working with no Dawarich at all: a `trips` table, a day's
+      visits derived from what the app itself saw, and a screen to read it.
+- [ ] Settings: optional Dawarich base URL and API key, off by default, with an explicit
+      "test connection" so a typo fails visibly rather than silently.
+- [ ] Dawarich client: one day, one park bbox, `slim=true`, paged.
+- [ ] Dwell detection, then the wait-sample cross-check for confidence.
+- [ ] Let it be wrong gracefully — everything editable or deletable by hand.
+
+### Phase 4 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.
 - [ ] Notify when a watched ride drops below a wait threshold.
-- [ ] Trip history — what was ridden, and when.
+- [ ] **Lightning Lane pricing and availability** from the schedule `purchases` array.
+      Demoted from Phase 2 on 2026-09-15: Zak is a local and rarely buys them.
+      **Verified live that day**: Magic Kingdom's schedule carries purchases on 31 of 78
+      entries — per-attraction Single Pass with an `available` flag and a formatted price,
+      plus Multi Pass ($23) and Premier Pass ($299) packages. `PurchaseDto` is already
+      written and parsed and nothing reads it, so this is domain and UI work only.
 - [ ] Resorts, if it ever seems worth it.
 
 ## Known nuances
