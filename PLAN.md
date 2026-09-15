@@ -81,26 +81,35 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       pick the wrong one. A test pins the distance so the tightness stays visible.
 - [ ] Nearest *ride* using the lat/long every entity carries — still to do.
 
-### Phase 2.5 — parking by geofence (Zak's request, 2026-09-14)
-Once "which park am I in" works, the same trick should fill in the parking section, leaving
-only the row to enter by hand.
+### Phase 2.5 — parking by geofence (Zak's request, 2026-09-14) — **done 2026-09-15**
+Opening the parking screen now takes a single fix and fills in what it can, leaving the row
+to type. `domain/ParkingAreas.kt` holds the polygons, `Geo.ringContains` the ray casting.
 
-- Lots do not move, so hardcoded polygons are fine. Zak has offered to trace them from
-  OpenStreetMap if nothing usable exists; worth checking OSM first, since Disney and
-  Universal lots are mapped as `amenity=parking` areas and some carry section names already.
-- Point-in-polygon is a dozen lines (ray casting), so the work is entirely in sourcing and
-  checking the shapes, not the maths.
-- **A geofence cannot give you the garage level.** Universal's number encodes level in its
-  first digit ("Cat in the Hat 457" = level 4, row 57), and GPS has no usable vertical
-  resolution inside a concrete deck. Level stays a manual pick there.
-- Section polygons at EPCOT and Magic Kingdom are large and well separated, so this should
-  be reliable at those. The tighter question is Universal's two garages, which sit almost
-  on top of each other.
-- **This is now testable without going to Orlando** (2026-09-15). Simulating a position on
-  the emulator was previously believed impossible; `adb emu geo fix` does work, as long as
-  it is sent while the app is holding an open GPS request. See the Location section of
-  `CLAUDE.md`. That matters most for the Universal garages, which are exactly the case
-  worth probing with a few points either side of the boundary.
+- **OpenStreetMap had the lots already**, so none had to be traced by hand. Disney maps
+  every guest lot individually and by name — all 12 at Magic Kingdom, all 8 at EPCOT, the
+  4 Animal Kingdom lots — and the names match the signage the app already lists. Outlines
+  were simplified to about 5m (1,700 points down to 316), which is finer than the GPS fix
+  testing against them. ODbL, so the credit is in NOTICE.md and on the settings screen.
+- **Universal's two garages are 426m apart, not on top of each other** — the worry recorded
+  here was wrong. They are cleanly separable, and OSM tags them `Structure North` (5 levels)
+  and `Structure South` (6 levels), which matches the signage.
+- **But the garages cannot tell you the park**, which is the real Universal limit and a
+  different one than expected: USF and Islands of Adventure are reached from the same two
+  structures. Those areas carry a garage name and a null park, and the screen asks
+  "You're in the South Garage — which park?" rather than guessing.
+- **A geofence cannot give you the garage level**, as expected — the number encodes it
+  ("Cat in the Hat 457" = level 4, row 57) and GPS has no vertical resolution inside a
+  deck. Level stays a manual pick, as does the row everywhere.
+- Verified on the emulator, both cases: a fix in Magic Kingdom's Ursula lot selected the
+  park and the section with no taps, and a fix in the South Garage asked which park.
+  `adb emu geo fix` works as long as the app is holding an open GPS request — see the
+  Location section of `CLAUDE.md`.
+
+Not mapped in OSM, so they prefill nothing: Hollywood Studios' **BB-8** lot, and four of
+Epic Universe's five sections (**Monster**, **Viking**, **Gamer**, **Hero**). Epic's two
+big lots are mapped unnamed, so a fix there still fills in the park. These are worth adding
+to OSM upstream rather than hand-tracing into the app — the table is generated from a
+query, so an upstream fix flows straight in.
 
 ### Phase 3 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.

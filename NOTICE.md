@@ -19,6 +19,12 @@ borrows and from whom.
   every request is triggered by something on screen, and responses are cached.
 - **[Open-Meteo](https://open-meteo.com)** — weather forecasts, fetched on demand.
   Free for non-commercial use, no API key, no user tracking.
+- **[OpenStreetMap](https://www.openstreetmap.org/copyright)** — the parking-lot outlines
+  in `app/src/main/kotlin/contact/kaufman/parks/domain/ParkingAreas.kt`, traced from OSM
+  data in September 2026 and simplified to roughly 5 metres. © OpenStreetMap contributors,
+  made available under the [Open Database License](https://opendatacommons.org/licenses/odbl/).
+  The shapes are shipped in the app rather than fetched, so nothing is requested from OSM
+  at runtime and no map tiles are used.
 
 ## Trademarks
 

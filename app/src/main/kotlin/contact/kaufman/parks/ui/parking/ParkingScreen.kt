@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -25,6 +26,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
@@ -90,6 +93,9 @@ fun ParkingScreen(
     val rowRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(initialPark) { viewModel.setPark(initialPark) }
+    // One fix, when the screen opens. Consistent with the rest of the app: location is
+    // asked for by a screen that needs it and never followed in the background.
+    LaunchedEffect(Unit) { viewModel.detectSpot() }
 
     Scaffold(
         modifier = modifier,
@@ -123,6 +129,10 @@ fun ParkingScreen(
                 ) {
                     active?.let { record -> ActiveSpotCard(record, onClear = viewModel::clearActive) }
                 }
+            }
+
+            item(key = "location-assist") {
+                LocationAssist(form = form, onRetry = viewModel::detectSpot)
             }
 
             item(key = "park-picker") {
@@ -338,3 +348,49 @@ private fun ParkingRecordEntity.describeSpot(): String {
 
 private fun ParkingRecordEntity.describeWhen(): String =
     Instant.fromEpochSeconds(parkedAtEpochSeconds).toParkClockTime()
+
+/**
+ * What the GPS fix managed to work out, and nothing more.
+ *
+ * This says what was filled in rather than filling it in silently. A prefilled picker with
+ * no explanation looks like the app remembering the last visit, and the difference matters
+ * when it is wrong — knowing it came from a fix is what tells you to check it.
+ *
+ * It stays absent until there is something to report, so the common case (a Disney lot,
+ * correctly identified) is one quiet line rather than a panel.
+ */
+@Composable
+private fun LocationAssist(form: ParkingFormState, onRetry: () -> Unit) {
+    val area = form.detected
+    val message = when {
+        form.locating -> "Checking where you are…"
+        area?.lot != null -> "From your location: ${area.lot}"
+        // Both Universal garages serve both parks, so this is as far as a fix can honestly
+        // go. Naming the garage is still most of the walk back.
+        area?.group != null -> "You're in the ${area.group} — which park?"
+        area?.park != null -> "You're at ${area.park.displayName}"
+        form.detectionMissed -> "Couldn't tell which lot you're in"
+        else -> return
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.MyLocation,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (form.detectionMissed) {
+            TextButton(onClick = onRetry) { Text("Try again") }
+        }
+    }
+}

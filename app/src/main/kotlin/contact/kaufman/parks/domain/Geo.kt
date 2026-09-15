@@ -2,6 +2,7 @@ package contact.kaufman.parks.domain
 
 import kotlin.math.asin
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -54,6 +55,66 @@ object Geo {
     /** Generous enough to cover a whole park from its centre, tight enough that the
      *  parking lots and the interstate do not count as being in one. */
     const val DEFAULT_PARK_RADIUS_METERS = 1_200.0
+
+    /**
+     * Is a position inside a polygon?
+     *
+     * [ring] is a flat `lat, lon, lat, lon, …` array, implicitly closed — the last point
+     * joins back to the first. Flat rather than a list of points because these are shipped
+     * constants and there are a few hundred of them; a `List<Pair<Double, Double>>` would
+     * box every single coordinate for no gain.
+     *
+     * Ray casting, counting crossings of a ray heading east. Over a car park this can treat
+     * latitude and longitude as a flat grid: the shapes are a few hundred metres across and
+     * nowhere near a pole or the dateline, so the error is far below the GPS fix feeding it.
+     */
+    fun ringContains(ring: DoubleArray, latitude: Double, longitude: Double): Boolean {
+        var inside = false
+        var j = ring.size - 2
+        for (i in ring.indices step 2) {
+            val lat1 = ring[i]
+            val lon1 = ring[i + 1]
+            val lat2 = ring[j]
+            val lon2 = ring[j + 1]
+            // Only edges that straddle the ray's latitude can cross it. The half-open
+            // comparison is what stops a vertex exactly on the ray counting twice.
+            if ((lat1 > latitude) != (lat2 > latitude)) {
+                val crossingLon = (lon2 - lon1) * (latitude - lat1) / (lat2 - lat1) + lon1
+                if (longitude < crossingLon) inside = !inside
+            }
+            j = i
+        }
+        return inside
+    }
+
+    /** Metres from a position to the nearest edge of [ring], zero-ish when it sits on one. */
+    fun distanceToRingMeters(ring: DoubleArray, latitude: Double, longitude: Double): Double {
+        // One local metres-per-degree scale for the whole ring. These are small shapes, so
+        // a single scale factor is plenty and keeps this to arithmetic.
+        val lonScale = METERS_PER_DEGREE_LATITUDE * cos(Math.toRadians(latitude))
+        val x = longitude * lonScale
+        val y = latitude * METERS_PER_DEGREE_LATITUDE
+        var best = Double.MAX_VALUE
+        var j = ring.size - 2
+        for (i in ring.indices step 2) {
+            val ax = ring[i + 1] * lonScale
+            val ay = ring[i] * METERS_PER_DEGREE_LATITUDE
+            val bx = ring[j + 1] * lonScale
+            val by = ring[j] * METERS_PER_DEGREE_LATITUDE
+            val dx = bx - ax
+            val dy = by - ay
+            val lengthSquared = dx * dx + dy * dy
+            // Clamped projection onto the segment, so the nearest point is never off its end.
+            val t = if (lengthSquared == 0.0) 0.0 else
+                (((x - ax) * dx + (y - ay) * dy) / lengthSquared).coerceIn(0.0, 1.0)
+            val distance = hypot(x - (ax + t * dx), y - (ay + t * dy))
+            if (distance < best) best = distance
+            j = i
+        }
+        return best
+    }
+
+    private const val METERS_PER_DEGREE_LATITUDE = 111_320.0
 
     /**
      * The midpoint of a resort's parks.

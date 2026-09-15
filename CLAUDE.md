@@ -293,6 +293,31 @@ Two traps already hit:
   edge-to-edge, `adjustResize` alone does **not** resize a Compose window, so without both
   the keyboard draws straight over the field being typed into.
 
+## Parking by geofence
+- `domain/ParkingAreas.kt` is the polygon table, traced from **OpenStreetMap** (ODbL — the
+  credit on the settings screen is a licence condition, not a courtesy, and must stay).
+  Shapes are shipped as constants; nothing is fetched from OSM at runtime and there are no
+  map tiles anywhere in this app.
+- Outlines are **simplified to about 5m** — 1,700 OSM points down to 316. Finer would be
+  false precision against a fix that is good to 5-10m at best. Neighbouring lots overlap by
+  up to 3m along their shared tram aisles as a result, which is below that noise floor.
+- `Geo.ringContains` is ray casting over a flat lat/lon grid. That is fine for shapes a few
+  hundred metres across in Florida and would not be near a pole or the dateline. Rings are
+  flat `DoubleArray`s rather than lists of points because they are shipped constants and a
+  `List<Pair<Double, Double>>` would box several hundred coordinates for nothing.
+- A fix inside nothing but within `NEAR_TOLERANCE_METERS` of an edge still counts as that
+  lot: cars sit in tram aisles between polygons, and a fix drifts.
+- **The prefill is an assist, never an authority.** `ParkingFormState.withDetected` never
+  overwrites a park or section already chosen by hand, and never fills the row or the
+  level. Tests pin the refusals, which is the half a refactor loses.
+- **A Universal garage cannot tell you the park.** USF and Islands of Adventure share both
+  structures, so those areas carry a `group` and a **null `park`**, and the screen asks
+  which park rather than guessing. The garages themselves are 426m apart and separate
+  cleanly — the old worry that they sat on top of each other was wrong.
+- Not in OSM, so they prefill nothing: Hollywood Studios' **BB-8**, and Epic Universe's
+  **Monster, Viking, Gamer, Hero**. The table is generated from an Overpass query, so the
+  fix for those is upstream in OSM rather than a hand-edit here.
+
 ## Parking lot data
 - A recorded spot **expires at 4AM park time**, not midnight (`domain/ParkingDay.kt`).
   Magic Kingdom's hard-ticket nights run to midnight and EPCOT's Extended Evening to 11PM,

@@ -140,8 +140,12 @@ fun SettingsScreen(
 
             item(key = "credit") {
                 Text(
+                    // The OpenStreetMap credit is a licence condition, not a courtesy: the
+                    // parking-lot outlines are ODbL and attribution has to reach the person
+                    // using them, which a file in the repo alone does not.
                     text = "Park data from themeparks.wiki · Weather from Open-Meteo\n" +
-                        "Crowd levels follow the method published by WDW Passport.\n\n" +
+                        "Crowd levels follow the method published by WDW Passport.\n" +
+                        "Parking lot outlines © OpenStreetMap contributors, ODbL.\n\n" +
                         "Not affiliated with The Walt Disney Company or NBCUniversal.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -3,8 +3,10 @@ package contact.kaufman.parks.ui.parking
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import contact.kaufman.parks.data.db.ParkingRecordEntity
+import contact.kaufman.parks.data.location.LocationProvider
 import contact.kaufman.parks.data.repo.ParkingRepository
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.ParkingAreas
 import contact.kaufman.parks.domain.ParkingLots
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +30,11 @@ data class ParkingFormState(
     val row: String = "",
     val note: String = "",
     val saved: Boolean = false,
+    /** The lot a GPS fix put you in, once one has been asked for. */
+    val detected: ParkingAreas.Area? = null,
+    val locating: Boolean = false,
+    /** A fix was obtained and matched nothing — worth saying, rather than silence. */
+    val detectionMissed: Boolean = false,
 ) {
     /** A spot with neither a lot nor a row records nothing useful. */
     val canSave: Boolean get() = park != null && (lot.isNotBlank() || row.isNotBlank())
@@ -38,12 +45,37 @@ data class ParkingFormState(
         row.isBlank() -> level.trim()
         else -> level.trim() + row.trim().padStart(2, '0')
     }
+
+    /**
+     * Take what a GPS fix worked out, without overwriting anything chosen by hand.
+     *
+     * An assist, never an authority. The person standing next to the car knows better than
+     * a fix that may have drifted, so an existing choice always wins — having your own
+     * answer silently replaced is worse than having to type it.
+     *
+     * Never touches the row or the level: rows are not mapped anywhere, and a garage level
+     * is invisible to GPS through a concrete deck.
+     */
+    fun withDetected(area: ParkingAreas.Area?): ParkingFormState {
+        val next = copy(locating = false, detected = area, detectionMissed = area == null)
+        if (area == null) return next
+        val park = this.park ?: area.park
+        // Only offer the section when it belongs to the park now selected. If a different
+        // park is already picked, the lot would be a name that park does not have.
+        val lot = when {
+            this.lot.isNotBlank() -> this.lot
+            park != null && park == area.park -> area.lot.orEmpty()
+            else -> ""
+        }
+        return next.copy(park = park, lot = lot)
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ParkingViewModel @Inject constructor(
     private val repository: ParkingRepository,
+    private val location: LocationProvider,
 ) : ViewModel() {
 
     init {
@@ -67,6 +99,22 @@ class ParkingViewModel @Inject constructor(
             else repository.recentRows(park, lot)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Fill in whatever a single GPS fix can settle: the park, and at Disney the named
+     * section too. See [ParkingFormState.withDetected] for what it refuses to touch.
+     *
+     * Failing quietly is fine. Every field is still typeable, so a missed fix costs a
+     * prefill and nothing else.
+     */
+    fun detectSpot() {
+        if (_form.value.locating || !location.hasPermission()) return
+        viewModelScope.launch {
+            _form.update { it.copy(locating = true, detectionMissed = false) }
+            val fix = location.current()
+            _form.update { it.withDetected(fix?.let { f -> ParkingAreas.at(f.latitude, f.longitude) }) }
+        }
+    }
 
     fun setPark(park: Park?) = _form.update { current ->
         val next = park ?: current.park
