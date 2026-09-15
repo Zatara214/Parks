@@ -8,37 +8,66 @@ language and proactively suggest workflow improvements. Roadmap and open decisio
 `PLAN.md`.
 
 ## Start of every session
-1. `gh issue list` — Zak files bugs and ideas from his phone as GitHub Issues.
+1. `gh issue list` — Zak files bugs and ideas from his phone as GitHub Issues. Run this
+   **on the host**: `gh` is not installed in the build container (see Build & verify).
 2. Read `PLAN.md` for the current milestone.
 
 ## Build & verify
-**The development machine is the arm64 Mac** (since 2026-09-14). The Linux box that built
-v0.1.0-v0.3.0 is retired; anything below labelled Linux is kept only as history, and must
-be re-verified before being trusted here.
+**The development machine is the Bazzite HTPC** (since 2026-09-14, re-verified 2026-09-15).
+It is the only machine that builds. Zak types at the session from his phone or his Mac over
+Claude Code remote control, but those are terminals — no toolchain lives on them, and
+nothing below should be re-read as advice about macOS.
 
-- Build: `./gradlew :app:assembleDebug`. JDK 17, SDK at `~/Library/Android/sdk`.
-- Tests: `./gradlew :app:testDebugUnitTest`. The crowd model is the part with real logic
-  in it, so it has real tests — keep them passing.
-- **`JAVA_HOME` and `ANDROID_HOME` live in `~/.zshenv`, not `~/.zshrc`.** This matters:
-  zsh reads `.zshrc` only for *interactive* shells, so anything scripted or tool-driven
-  got a stale system JDK 11 and died on `Bad CPU type in executable` (that JDK is x86 and
-  this Mac is arm64). Keep toolchain exports in `.zshenv` and they apply everywhere.
-- **The emulator works here, and the Linux caveats do not apply** (verified 2026-09-14):
-  ```
-  emulator -avd Pixel_9_Pro -no-window -no-audio -no-boot-anim &
-  adb wait-for-device
-  adb install -r app/build/outputs/apk/debug/app-debug.apk
-  adb shell am start -n contact.kaufman.parks.debug/contact.kaufman.parks.MainActivity
-  adb exec-out screencap -p > /tmp/shot.png
-  ```
-  The AVD is `Pixel_9_Pro` (**not** `Pixel_9_Pro_CLI`, which was the Linux box's). It boots
-  in about 20 seconds, authorizes adb **without a tap**, and needs **no `-gpu host`** — the
-  default backend is fine. `-gpu host` was a workaround for a swiftshader segfault on the
-  Bazzite host only.
+There was a brief spell in between where an arm64 Mac was the documented machine, and its
+notes replaced the Linux ones wholesale. Anything that still smells like macOS advice
+(`~/Library/Android/sdk`, `~/.zshenv`, `Pixel_9_Pro`, "no `timeout(1)`") is from that spell
+and is wrong here.
+
+### Everything Gradle runs inside a container
+Bazzite is an immutable Fedora atomic image, so the toolchain lives in a **distrobox
+container named `android-dev`** (Fedora 44). There is **no `java` on the host at all** —
+a bare `./gradlew` from the host fails with `java: command not found`, which looks like a
+broken project and is not. Wrap every Gradle command:
+
+```
+distrobox enter android-dev -- bash -lc 'cd /var/home/zak/Projects/Parks && ./gradlew :app:assembleDebug'
+```
+
+- Inside the container: Temurin JDK 17 at `/usr/lib/jvm/temurin-17-jdk`, `ANDROID_HOME`
+  set to `/var/home/zak/Android/Sdk`. Both are already on the container's login-shell
+  environment, which is why the `-lc` matters — use a login shell, not a bare `bash -c`.
+- `gh` is the **opposite way round**: installed on the host, absent from the container.
+  Run issue and release commands from the host.
+- The container shares the home directory and the network, so the repo, the SDK, the
+  keystore and the adb server are all the same ones the host sees. `adb` works from either
+  side and talks to the same server.
+- Tests: `./gradlew :app:testDebugUnitTest` (same wrapper). The crowd model is the part
+  with real logic in it, so it has real tests — keep them passing.
+
+### The emulator
+Run it **from the host** — the host has `~/Android/Sdk/emulator` and no JDK is needed to
+boot an AVD. The AVD is **`android37`** (a pixel_7 profile on android-37.0 google_apis
+x86_64). Not `Pixel_9_Pro` (the Mac's) and not `Pixel_9_Pro_CLI` (the old Linux box's).
+
+```
+~/Android/Sdk/emulator/emulator -avd android37 -no-window -no-audio -no-boot-anim -gpu host &
+until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 3; done
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n contact.kaufman.parks.debug/contact.kaufman.parks.MainActivity
+adb exec-out screencap -p > /tmp/shot.png
+```
+
+- **`-gpu host` is required, not optional** (re-confirmed 2026-09-15). Without it the
+  emulator dies in about 20 seconds with a `SIGSEGV` in
+  `qemu-system-x86_64-headless` — a core lands in `coredumpctl`, no device ever appears in
+  `adb devices`, and the emulator log's last line is the innocuous "cold boot without a
+  saved state". It reads like a hang or a bad AVD; it is the swiftshader crash. With
+  `-gpu host` it boots in **30 seconds** and authorizes adb **without a tap**.
+- `/dev/kvm` is `crw-rw-rw-`, so acceleration works without adding Zak to a `kvm` group.
+- Linux has `timeout(1)`, so the poll loop above is a convenience rather than a necessity.
 - The app requests location on first launch. Skip the dialog in scripted runs with
   `adb shell pm grant contact.kaufman.parks.debug android.permission.ACCESS_FINE_LOCATION`
   (and `ACCESS_COARSE_LOCATION`), then force-stop and relaunch.
-- macOS has no `timeout(1)`. Poll `adb shell getprop sys.boot_completed` in a loop instead.
 - Screenshot previews also exist via `./gradlew updateDebugScreenshotTest`.
 - Zak installs releases via Obtainium from GitHub Releases. He does not use ADB.
 
@@ -136,9 +165,14 @@ Two traps already hit:
 - **Launcher entry point only.** Both apps almost certainly have internal deep links to
   mobile order or a specific restaurant, but none are documented; an undocumented scheme
   that silently stops working is worse than one extra tap.
-- Falls back `market://` then the Play Store web URL then a toast. The emulator image has
-  no Play Store, so the web branch is the one exercised there — the direct-launch branch
-  can only be verified on a device that actually has the app.
+- Falls back `market://` then the Play Store web URL then a toast. The emulator is a
+  `google_apis` image, so the web branch is the one exercised there — the direct-launch
+  branch can only be verified on a device that actually has the app.
+- **`com.android.vending` is present on `android37` but is a stub** (checked 2026-09-15):
+  no launcher activity, and `market://` resolves to nothing. This is why the code tests
+  with `getLaunchIntentForPackage` rather than `getPackageInfo` — the latter would report
+  the Play Store as installed here — and why the `market://` step is wrapped in
+  `runCatching` rather than pre-resolved. Both hold up on this AVD; keep them that way.
 
 ## Location
 - `data/location/LocationProvider.kt` uses the **platform `LocationManager`**, not Play
@@ -157,12 +191,37 @@ Two traps already hit:
   The location diagnostics print GPS coordinates, and those have no business surviving into
   a shipped build of this app. Warnings and errors are kept. If you add a diagnostic that
   must survive release, use `Log.w`, and think hard about what is in it.
-- **Emulator caveat:** changing the emulator's system clock wedges its GPS backend, after
-  which `adb emu geo fix` returns OK and does nothing. If location testing goes dead after
-  a date-change test, restart the AVD rather than debugging the app. Note that even after
-  a restart the AVD carries a **persisted** last-known location that `geo fix` will not
-  override (`gps provider: ProviderRequest[OFF]`), so simulating a position in a park is
-  not currently possible here — verify location features on a real device.
+- **Simulating a position works on `android37`** (established 2026-09-15). The previous
+  note said it was impossible and to verify on a real device; that was the wrong conclusion
+  drawn from a real symptom. `geo fix` is the tool — the trick is *when* you send it:
+
+  ```
+  adb shell am force-stop contact.kaufman.parks.debug
+  adb shell am start -n contact.kaufman.parks.debug/contact.kaufman.parks.MainActivity
+  for i in $(seq 1 8); do adb emu geo fix -81.5901 28.3553; sleep 1; done   # Animal Kingdom
+  ```
+
+  **`adb emu geo fix` is silently discarded unless a client is holding a live GPS request
+  at that moment.** The console answers `OK` either way, which is what makes it so
+  misleading. `dumpsys location | grep -A1 "gps provider:"` showing `ProviderRequest[OFF]`
+  means nothing was listening and your fix went nowhere. Parks asks for a *single* fix on
+  demand, so the window opens on launch and shuts as soon as a fix lands — hence
+  force-stop, relaunch, then loop the fix for a few seconds. Sending it to an app that is
+  not running does nothing at all, verified.
+  Confirmed end to end twice: the dashboard pinned "You're here · Islands of Adventure"
+  and then "· Animal Kingdom", and the weather strip moved between Universal's 76°/feels
+  84° and Disney's 78°/feels 87° — which incidentally exercises the per-resort split.
+- **Do not reach for `cmd location providers`** — it does not work here and looks like it
+  might. `add-test-provider` throws `SecurityException: android from uid 2000 not allowed
+  to perform MOCK_LOCATION`, `enable-test-provider` reports "Unknown command", and
+  `set-test-provider-location gps --latitude …` throws `Unknown option: --latitude`. It is
+  easy to run these, see the position change, and credit the wrong command — the change is
+  a `geo fix` from moments earlier landing late. That mis-attribution happened while
+  writing this note.
+- The clock-change wedge described previously was **not** reproduced here, and the
+  `ProviderRequest[OFF]` symptom showed up on a cold-booted AVD whose clock was never
+  touched — so the clock was probably never the cause. The cached-fix behaviour above
+  explains the original symptom without it.
 
 ## Wait-time history
 - An expanded ride shows two charts: Disney's **forecast** for the hours left today, and
@@ -259,12 +318,14 @@ Two traps already hit:
 - Re-installing resets the nav stack, so scripted tap sequences must start from the
   dashboard. Check `dumpsys activity activities | grep ResumedActivity:` between steps
   rather than assuming a tap landed. This one is general and still holds.
-- Carried over from the Linux box and **not yet re-checked on the Mac** — re-verify before
-  relying on either:
+- Recorded on the **retired** Linux box's `Pixel_9_Pro_CLI`, and **not re-checked** on this
+  machine's `android37` — treat as a warning, not a fact:
   - `input keyevent 111` (ESCAPE) exited the app rather than closing the keyboard; BACK
     (`keyevent 4`) was the safe way to dismiss it.
   - Grassfed ran in a freeform floating window on that AVD and swallowed taps aimed at
-    Parks. Grassfed is not installed on this Mac's `Pixel_9_Pro`, so this should be moot.
+    Parks. Confirmed 2026-09-15 that **neither Grassfed nor LubeLogger is installed on
+    `android37`**, so nothing should be stealing taps here today — but all three projects
+    share this AVD, so re-check with `pm list packages` if taps start going astray.
 
 ## Setting up a new machine
 A fresh clone does **not** build signed releases, and three things have to be carried over
@@ -275,18 +336,22 @@ by hand because none of them belong in git:
    fall back to the **debug key**, which produces an APK that installs fine and then
    refuses every properly signed update. CI is unaffected: it signs from GitHub secrets.
 2. **`local.properties`** — gitignored, one line, machine-specific: `sdk.dir=<path to the
-   Android SDK>`. On macOS that is usually `~/Library/Android/sdk`, not `~/Android/Sdk`.
+   Android SDK>`. On this machine `sdk.dir=/var/home/zak/Android/Sdk`. Write the real
+   `/var/home` path, not `/home`: `/home` is a symlink to `var/home` on Fedora atomic, so
+   both resolve, but tools that compare paths literally will disagree with each other.
 3. **JDK 17 and Android SDK platform 37.2** must be present. The build pins
-   `jvmToolchain(17)`, so a newer default JDK is fine as long as 17 is installed.
+   `jvmToolchain(17)`, so a newer default JDK is fine as long as 17 is installed. On an
+   immutable host this means inside the container — do not try to layer a JDK with
+   `rpm-ostree`.
 
-**Status of the current Mac (2026-09-14):** items 2 and 3 are done — `local.properties`
-points at `~/Library/Android/sdk`, and JDK 17 plus platform 37.2 are installed. Item 1 is
-**outstanding**: `~/.config/parks/` does not exist here, so a local release build would be
-debug-signed. Tagging still cuts a correct release, because CI signs from GitHub secrets —
-but copy the keystore over before ever building a release APK by hand.
+**Status of this Bazzite box (verified 2026-09-15): all three done.** `~/.config/parks/`
+holds both files at `600`; `local.properties` points at `/var/home/zak/Android/Sdk`;
+Temurin 17 and platforms 37.0 + 37.2 are installed in the `android-dev` container. A local
+release build here signs correctly — `keytool` reports alias `parks` and SHA-256
+`83:B8:F7:0F:C6:B1:18:CE:…`, matching the published key.
 
-The `-gpu host` flag and the swiftshader segfault it worked around were **Bazzite-only**;
-the emulator section above records what has since been confirmed on macOS.
+One wrinkle worth knowing: `keystore.properties` has `storeFile=/home/zak/.config/parks/…`.
+That resolves, because `/home` → `var/home`. Leave it alone unless it breaks.
 
 ## Secrets and release identity
 - Release keystore lives in `~/.config/parks/keystore.properties` (outside the repo) and as

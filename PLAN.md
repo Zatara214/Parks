@@ -96,6 +96,11 @@ only the row to enter by hand.
 - Section polygons at EPCOT and Magic Kingdom are large and well separated, so this should
   be reliable at those. The tighter question is Universal's two garages, which sit almost
   on top of each other.
+- **This is now testable without going to Orlando** (2026-09-15). Simulating a position on
+  the emulator was previously believed impossible; `adb emu geo fix` does work, as long as
+  it is sent while the app is holding an open GPS request. See the Location section of
+  `CLAUDE.md`. That matters most for the Universal garages, which are exactly the case
+  worth probing with a few points either side of the boundary.
 
 ### Phase 3 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.
