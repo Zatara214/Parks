@@ -252,6 +252,24 @@ Two traps already hit:
   dashboard. Check `dumpsys activity activities | grep ResumedActivity:` between steps
   rather than assuming a tap landed.
 
+## Working on a different machine
+A fresh clone does **not** build signed releases, and three things have to be carried over
+by hand because none of them belong in git:
+
+1. **`~/.config/parks/`** — `parks-release.jks` and `keystore.properties`. Copy the whole
+   directory (`chmod 600` both files afterwards). Without it, local release builds silently
+   fall back to the **debug key**, which produces an APK that installs fine and then
+   refuses every properly signed update. CI is unaffected: it signs from GitHub secrets.
+2. **`local.properties`** — gitignored, one line, machine-specific: `sdk.dir=<path to the
+   Android SDK>`. On macOS that is usually `~/Library/Android/sdk`, not `~/Android/Sdk`.
+3. **JDK 17 and Android SDK platform 37.2** must be present. The build pins
+   `jvmToolchain(17)`, so a newer default JDK is fine as long as 17 is installed.
+
+The emulator notes further down are **Linux-specific**. `-gpu host` is a workaround for a
+swiftshader segfault on the Bazzite host; on macOS the default backend is normally fine,
+and the Grassfed-window and clock-wedges-GPS caveats will not apply. Re-verify rather than
+trusting them.
+
 ## Secrets and release identity
 - Release keystore lives in `~/.config/parks/keystore.properties` (outside the repo) and as
   GitHub Actions secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
