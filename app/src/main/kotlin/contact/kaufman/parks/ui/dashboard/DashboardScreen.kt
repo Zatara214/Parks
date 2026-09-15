@@ -69,7 +69,13 @@ fun DashboardScreen(
             )
         }
     }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // enterAlways, not exitUntilCollapsed. The latter only re-expands the bar once the
+    // list is back at the very top — and at the top, PullToRefreshBox consumes the downward
+    // drag to drive its indicator, so the app bar never sees the gesture that would grow it
+    // back. The result was a large title that collapsed once on the first scroll and then
+    // stayed collapsed for the rest of the session, including at the top of the list.
+    // enterAlways expands on any upward scroll, so it never depends on reaching the top.
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -81,6 +87,7 @@ fun DashboardScreen(
                 weather = { ResortWeatherStrip(state.resortWeather, temperatureUnit) },
             )
         },
+        floatingActionButton = { ParkingFab(parking, onParkingClick) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -103,9 +110,7 @@ fun DashboardScreen(
 
                 else -> ParkList(
                     snapshots = state.snapshots.filter { it.park in visibleParks },
-                    parking = parking,
                     onParkClick = onParkClick,
-                    onParkingClick = onParkingClick,
                     youAreHere = state.youAreHere,
                 )
             }
@@ -116,22 +121,18 @@ fun DashboardScreen(
 @Composable
 private fun ParkList(
     snapshots: List<ParkSnapshot>,
-    parking: ParkingRecordEntity?,
     onParkClick: (Park) -> Unit,
-    onParkingClick: () -> Unit,
     youAreHere: Park?,
 ) {
     val byResort = snapshots.groupBy { it.park.resort }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        // Room at the bottom for the last card to clear the floating button, which would
+        // otherwise sit on top of whichever park happens to be listed last.
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "parking") {
-            ParkingPin(parking, onParkingClick, Modifier.animateItem())
-        }
-
         // Ordering lives in dashboardSections() so the "don't list it twice" rule can be
         // tested; the card keeps its list key, so it animates up rather than blinking into
         // place when the fix lands.

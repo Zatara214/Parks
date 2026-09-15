@@ -41,7 +41,7 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       by `predictivePopTransitionSpec` (the plain pop spec does not drive the gesture).
 - [x] **Park detail screen** — Rides/Shows/Dining tabs, sort by wait or name, "open only"
       filter. Rides with no posted wait sort to the bottom rather than as a zero.
-- [x] **Parking** — record-a-spot flow with a pinned dashboard card and history. Verified
+- [x] **Parking** — record-a-spot flow with a dashboard button and history. Verified
       end to end on-device, survives a restart.
 - [x] **Weather on the park screen** — behind a "Check" tap, never fetched automatically.
       Shows feels-like (the number that matters in Orlando) and the next hours of rain chance.

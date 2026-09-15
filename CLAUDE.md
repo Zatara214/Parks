@@ -445,6 +445,23 @@ Two traps already hit:
 - A failed refresh returns the **last cached reading** rather than null, so the strip never
   blanks on a flaky connection.
 
+## The dashboard's chrome
+- **Parking is an extended FAB, not a card in the list.** It was a full-width card pinned
+  above every park, which meant an empty "Record your parking spot" prompt occupied the top
+  of the screen every day for a thing done once a visit. The button keeps its label in both
+  states — the icon alone is a car, which could as easily mean directions — and when a spot
+  is recorded the label becomes the spot, so the dashboard still answers "where is the car?"
+  at a glance. The park name is dropped there for width; the parking screen has it in full.
+- The list carries **96dp of bottom content padding** so the last park card can scroll clear
+  of the button rather than sitting under it forever.
+- **The top bar uses `enterAlwaysScrollBehavior`, and must not go back to
+  `exitUntilCollapsed`.** exitUntilCollapsed only re-expands once the list is back at the
+  very top — and at the top, `PullToRefreshBox` consumes the downward drag to drive its
+  indicator, so the app bar never receives the gesture that would grow it back. The visible
+  bug was a large title that collapsed on the first scroll and then stayed collapsed for the
+  rest of the session, even sitting at the top of the list. The two components want the same
+  gesture in the same place; enterAlways sidesteps it by expanding on any upward scroll.
+
 ## Parking screen
 - Every picker is a **fused Material 3 Expressive button group** (`ui/parking/FusedButtons.kt`)
   — park, section, garage level. Each step is a pick-exactly-one, which is what a connected
