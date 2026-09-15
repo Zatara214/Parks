@@ -43,6 +43,7 @@ import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.Queue
 import contact.kaufman.parks.domain.WaitHistoryDay
+import contact.kaufman.parks.ui.components.formatWalkingDistance
 import contact.kaufman.parks.ui.components.toParkClockTime
 import contact.kaufman.parks.ui.theme.waitColor
 
@@ -55,6 +56,8 @@ fun RideRow(
     entity: ParkEntity,
     modifier: Modifier = Modifier,
     loadHistory: (suspend (String) -> List<WaitHistoryDay>)? = null,
+    /** Metres from the viewer, when the list is ordered by distance. */
+    distanceMeters: Double? = null,
 ) {
     var expanded by rememberSaveable(entity.id) { mutableStateOf(false) }
     var history by remember(entity.id) { mutableStateOf<List<WaitHistoryDay>>(emptyList()) }
@@ -91,7 +94,7 @@ fun RideRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val detail = entity.secondaryLine()
+                val detail = entity.secondaryLine(distanceMeters)
                 if (detail != null) {
                     Text(
                         text = detail,
@@ -190,8 +193,11 @@ private fun StatusBadge(label: String, color: Color) {
  * two that actually change what you do next; the Lightning Lane return window matters
  * only when it is actually available.
  */
-private fun ParkEntity.secondaryLine(): String? {
+private fun ParkEntity.secondaryLine(distanceMeters: Double? = null): String? {
     val parts = buildList {
+        // First, because when the list is ordered by distance that is what the eye is
+        // scanning for; the queue detail is still there behind it.
+        distanceMeters?.let { add(formatWalkingDistance(it)) }
         queues.forEach { queue ->
             when (queue) {
                 is Queue.SingleRider -> queue.waitMinutes?.let { add("Single rider $it min") }

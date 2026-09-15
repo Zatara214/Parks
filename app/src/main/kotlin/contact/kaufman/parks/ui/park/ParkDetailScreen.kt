@@ -43,6 +43,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.Resort
+import contact.kaufman.parks.domain.distanceMetersFrom
 import contact.kaufman.parks.ui.components.OfficialApps
 import contact.kaufman.parks.ui.components.CrowdPill
 import contact.kaufman.parks.ui.components.formatHoursRange
@@ -143,7 +144,7 @@ fun ParkDetailScreen(
                             label = { Text("Open only") },
                         )
                         if (state.tab == ParkTab.RIDES) {
-                            RideSort.entries.forEach { sort ->
+                            state.availableSorts().forEach { sort ->
                                 FilterChip(
                                     selected = state.sort == sort,
                                     onClick = { viewModel.selectSort(sort) },
@@ -178,6 +179,11 @@ fun ParkDetailScreen(
                             entity = entity,
                             modifier = Modifier.animateItem(),
                             loadHistory = viewModel::waitHistory,
+                            // Only while sorting by it. On the wait or A-Z orders a
+                            // distance is a number nobody asked for on every row.
+                            distanceMeters = state.fix
+                                ?.takeIf { state.sort == RideSort.NEARBY }
+                                ?.let { entity.distanceMetersFrom(it.latitude, it.longitude) },
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
                     }

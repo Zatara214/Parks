@@ -2,14 +2,17 @@ package contact.kaufman.parks.ui.park
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import contact.kaufman.parks.data.location.LocationProvider
 import contact.kaufman.parks.data.prefs.SettingsStore
 import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
 import contact.kaufman.parks.domain.EntityKind
+import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
+import contact.kaufman.parks.domain.distanceMetersFrom
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -33,7 +36,17 @@ enum class ParkTab(val label: String) {
 enum class RideSort(val label: String) {
     WAIT("Wait"),
     NAME("A–Z"),
+    NEARBY("Nearby"),
 }
+
+/**
+ * A fix taken **inside** the park being viewed.
+ *
+ * The type exists to make that precondition hard to lose. Ride distances are only
+ * meaningful from inside the park; measured from home they would order every ride by a
+ * gradient pointing at the front gate, which looks like a working feature and is not one.
+ */
+data class InParkFix(val latitude: Double, val longitude: Double)
 
 data class ParkDetailUiState(
     val snapshot: ParkSnapshot? = null,
@@ -44,12 +57,22 @@ data class ParkDetailUiState(
     val isRefreshing: Boolean = false,
     val weather: ParkWeather? = null,
     val isLoadingWeather: Boolean = false,
-)
+    val fix: InParkFix? = null,
+) {
+    /**
+     * Sorting by distance is only offered once there is a fix inside this park, so the
+     * control never appears in a state where it cannot do anything. Nothing here asks for
+     * permission: if location is off, the chip simply is not there.
+     */
+    fun availableSorts(): List<RideSort> =
+        RideSort.entries.filter { it != RideSort.NEARBY || fix != null }
+}
 
 @HiltViewModel(assistedFactory = ParkDetailViewModel.Factory::class)
 class ParkDetailViewModel @AssistedInject constructor(
     @Assisted private val park: Park,
     private val repository: ParksRepository,
+    private val location: LocationProvider,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -74,6 +97,7 @@ class ParkDetailViewModel @AssistedInject constructor(
         // Opening a park screen is the intent to see its weather; making it a second tap
         // was needless. The repository throttles the actual fetch.
         loadWeather()
+        locate()
     }
 
     fun refresh() = load(force = true)
@@ -97,6 +121,24 @@ class ParkDetailViewModel @AssistedInject constructor(
             _state.update { it.copy(isLoadingWeather = true) }
             val weather = repository.weather(park)
             _state.update { it.copy(weather = weather, isLoadingWeather = false) }
+        }
+    }
+
+    /**
+     * One fix, on open, used only to decide whether "Nearby" can be offered and to measure
+     * from. Discarded unless it lands inside this park.
+     *
+     * `Geo.parkAt` does the deciding, so the radius and the nearest-centre rule stay in one
+     * tested place. Its one soft spot applies here too: Universal Studios and Islands of
+     * Adventure sit under a kilometre apart, so a poor fix near their shared wall can pick
+     * the sibling and this screen will quietly not offer the sort. Not offering it is the
+     * right failure — the alternative is distances measured from the wrong park.
+     */
+    private fun locate() {
+        if (!location.hasPermission()) return
+        viewModelScope.launch {
+            val fix = location.current()?.takeIf { Geo.parkAt(it.latitude, it.longitude) == park }
+            _state.update { it.copy(fix = fix?.let { f -> InParkFix(f.latitude, f.longitude) }) }
         }
     }
 
@@ -130,6 +172,13 @@ fun ParkDetailUiState.visibleEntities(): List<ParkEntity> {
     return when {
         tab != ParkTab.RIDES -> filtered.sortedBy { it.name }
         sort == RideSort.NAME -> filtered.sortedBy { it.name }
+        // Guarded on the fix rather than the sort alone: the chip disappears if the fix is
+        // lost, and falling back to the wait order beats rendering an arbitrary one.
+        sort == RideSort.NEARBY && fix != null -> filtered.sortedBy {
+            // Entities with no coordinates sink to the bottom, the same way a ride with no
+            // posted wait does, rather than pretending to be nought feet away.
+            it.distanceMetersFrom(fix.latitude, fix.longitude) ?: Double.MAX_VALUE
+        }
         // Longest wait first, and rides with no posted wait sink to the bottom rather
         // than being treated as a zero-minute wait.
         else -> filtered.sortedByDescending { it.standbyMinutes ?: -1 }

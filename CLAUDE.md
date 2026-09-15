@@ -157,6 +157,27 @@ Two traps already hit:
   queues taper at close. That is real, not a bug, but it does mean the advice reads
   similarly across many rides on the same evening.
 
+## Nearest ride
+- A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides
+  the chip unless there is a fix, so the control never exists in a state where it cannot
+  do anything, and nothing has to explain itself when location is off.
+- **The fix is discarded unless `Geo.parkAt` puts it in the park being viewed.** From home
+  the sort would order every ride by a gradient pointing at the front gate — plausible
+  output from a broken feature, which is the worst kind. `InParkFix` is a distinct type so
+  that precondition is hard to drop in a refactor.
+- `parkAt`'s soft spot applies: a poor fix near the USF/IOA wall can pick the sibling park
+  and the chip then quietly does not appear. That is the right failure — the alternative is
+  distances measured from next door.
+- `visibleEntities()` guards on the **fix**, not the sort, so losing location falls back to
+  the wait order rather than rendering an arbitrary one. Entities with no coordinates sort
+  last, the same way a ride with no posted wait does.
+- Distances are shown **only while that sort is active**. On the wait or A–Z orders they
+  would be a number on every row that nobody asked for.
+- `formatWalkingDistance` is feet and miles, matching the US English used everywhere else
+  rather than adding a second unit setting beside the temperature one. Rounded to 10ft,
+  which is finer than the fix deserves — but rounding coarser makes a sorted list look
+  broken, with several rides sharing a distance while sitting in an obvious order.
+
 ## Hand-off to the official apps
 - `ui/components/OfficialApps.kt`. Package names verified against the Play Store listings
   2026-09-14: `com.disney.wdw.android`, `com.universalstudios.orlandoresort`. Both are

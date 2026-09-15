@@ -58,7 +58,7 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
 
 **Phase 1 complete.**
 
-### Phase 2 — depth (complete apart from nearest-ride)
+### Phase 2 — depth (complete apart from Lightning Lane)
 - [x] **"Best time to ride today"** — tapping a Disney ride expands an hourly forecast bar
       chart with the quietest hour still ahead called out. Universal sends no forecast, so
       those rows are not expandable at all rather than opening an empty chart.
@@ -70,6 +70,10 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       recorded while walking past is not a day's average. Works at Universal too, which has
       no forecast — those rows become expandable once there is history to show.
 - [ ] Lightning Lane pricing and availability from the schedule `purchases` array.
+      **Verified live 2026-09-15**: Magic Kingdom's schedule carries purchases on 31 of 78
+      entries — per-attraction Single Pass with an `available` flag and a formatted price,
+      plus Multi Pass and Premier Pass packages. `PurchaseDto` is already written and
+      parsed, and nothing reads it, so this is domain and UI work only.
 - [x] **Hand-off to the official apps** — an action on every park screen, plus an explicit
       card on the Dining tab where mobile order actually lives. Launches the installed app,
       or its Play Store listing. Only the launcher entry point is used: both apps surely
@@ -79,7 +83,14 @@ themeparks.wiki. See the crowd model section of `CLAUDE.md`.
       pins that park to the top of the dashboard (shipped in v0.3.0). Centres are crude:
       USF and IOA share a wall and sit under 1km apart, so a poor fix near that boundary can
       pick the wrong one. A test pins the distance so the tightness stays visible.
-- [ ] Nearest *ride* using the lat/long every entity carries — still to do.
+- [x] **Nearest ride** — a third "Nearby" sort on the Rides tab, ordering by straight-line
+      distance from one fix and showing each ride's distance while that order is active.
+      The chip **only appears when the fix is inside that park** (`Geo.parkAt`): measured
+      from home it would order every ride by a gradient pointing at the front gate, which
+      looks like a working feature and is not one. Rides with no coordinates sink to the
+      bottom, as rides with no posted wait already do. Verified on the emulator from
+      Cinderella Castle — Main Street Vehicles 320 ft, the Railroad 420 ft, Laugh Floor
+      530 ft, ascending correctly — and confirmed absent from downtown Orlando.
 
 ### Phase 2.5 — parking by geofence (Zak's request, 2026-09-14) — **done 2026-09-15**
 Opening the parking screen now takes a single fix and fills in what it can, leaving the row
