@@ -135,6 +135,10 @@ private fun WaitBadge(entity: ParkEntity) {
     val minutes = entity.standbyMinutes
 
     when {
+        // No badge at all when the status is genuinely unknown, which is every Disney
+        // Springs restaurant: they come from the destination feed, which carries no live
+        // status. "Closed" was appearing for all of them, which is a claim, not a blank.
+        entity.status == OperatingStatus.UNKNOWN -> Unit
         entity.status == OperatingStatus.DOWN -> StatusBadge("Down", MaterialTheme.colorScheme.error)
         entity.status == OperatingStatus.REFURBISHMENT -> StatusBadge("Refurb", MaterialTheme.colorScheme.tertiary)
         !entity.isOperating -> StatusBadge("Closed", MaterialTheme.colorScheme.outline)

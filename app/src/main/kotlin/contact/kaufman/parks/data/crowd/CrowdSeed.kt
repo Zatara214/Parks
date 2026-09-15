@@ -78,6 +78,10 @@ object CrowdSeed {
         Park.UNIVERSAL_STUDIOS_FLORIDA -> UNIVERSAL_STUDIOS_FLORIDA
         Park.ISLANDS_OF_ADVENTURE -> ISLANDS_OF_ADVENTURE
         Park.EPIC_UNIVERSE -> EPIC_UNIVERSE
+        // Disney Springs has no rides, so there is nothing to rank and no crowd level to
+        // publish. An empty list is the honest answer and the model already refuses to
+        // read anything from fewer than three watched attractions.
+        Park.DISNEY_SPRINGS -> emptyList()
     }
 
     private val MAGIC_KINGDOM = listOf(

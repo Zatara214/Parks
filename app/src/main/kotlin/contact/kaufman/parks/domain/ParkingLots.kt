@@ -37,6 +37,13 @@ object ParkingLots {
             LotGroup("North Garage", listOf("Jaws", "King Kong", "Jurassic Park")),
             LotGroup("South Garage", listOf("Spider-Man", "Cat in the Hat", "E.T.")),
         )
+        // Disney Springs charges nothing and numbers nothing: the garages have levels and
+        // letters on the signs, but no numbered rows like a theme park lot. The row field
+        // still accepts anything, which is where a level or a letter goes.
+        Park.DISNEY_SPRINGS -> listOf(
+            LotGroup("Garages", listOf("Orange", "Lime", "Grapefruit")),
+            LotGroup("Surface lots", listOf("Lemon", "Mango", "Strawberry", "Watermelon")),
+        )
         Park.EPIC_UNIVERSE -> listOf(
             LotGroup(null, listOf("Explorer", "Monster", "Viking", "Gamer", "Hero")),
         )
@@ -53,9 +60,14 @@ object ParkingLots {
      */
     fun hasLevels(park: Park): Boolean = when (park) {
         Park.UNIVERSAL_STUDIOS_FLORIDA, Park.ISLANDS_OF_ADVENTURE -> true
+        // Disney Springs' three garages are multi-storey, but unlike Universal the level is
+        // not encoded in a posted number — so the picker helps, and `signRow` must not
+        // glue the two together. See the guard in ParkingFormState.
+        Park.DISNEY_SPRINGS -> true
         else -> false
     }
 
-    /** The garages run to six floors; the north side stops at five. */
+    /** The garages run to six floors; the north side stops at five. Disney Springs'
+     *  deepest, Grapefruit, is five, so one list covers both. */
     val GARAGE_LEVELS = (1..6).map(Int::toString)
 }

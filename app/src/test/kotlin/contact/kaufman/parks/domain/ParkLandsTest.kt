@@ -8,6 +8,12 @@ import org.junit.Test
 /** Coordinates are the real ones themeparks.wiki publishes for these attractions. */
 class ParkLandsTest {
 
+    /** A dining district has no lands, and the chip row keys off exactly this. */
+    @Test
+    fun `Disney Springs has no lands, which is not a gap`() {
+        assertTrue(ParkLands.landsIn(Park.DISNEY_SPRINGS).isEmpty())
+    }
+
     @Test
     fun `rides land in the land they are actually in`() {
         assertEquals("Fantasyland", ParkLands.landAt(Park.MAGIC_KINGDOM, 28.42037, -81.58031))
@@ -47,7 +53,8 @@ class ParkLandsTest {
      */
     @Test
     fun `every park reports its own lands and only its own`() {
-        for (park in Park.entries) {
+        // Disney Springs is not a theme park and has no lands; it is not a coverage gap.
+        for (park in Park.entries.filter { it.kind == ParkKind.THEME_PARK }) {
             val names = ParkLands.landsIn(park)
             assertTrue("${park.displayName} has no mapped lands", names.isNotEmpty())
             assertTrue(

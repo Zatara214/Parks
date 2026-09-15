@@ -2,6 +2,7 @@ package contact.kaufman.parks.ui.dashboard
 
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkSnapshot
+import contact.kaufman.parks.domain.Resort
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,7 +16,7 @@ class DashboardSectionsTest {
     fun `with no fix the list is just the two resorts`() {
         val sections = dashboardSections(all, youAreHere = null)
         assertEquals(listOf("Walt Disney World", "Universal Orlando"), sections.map { it.title })
-        assertEquals(7, sections.sumOf { it.snapshots.size })
+        assertEquals(Park.entries.size, sections.sumOf { it.snapshots.size })
     }
 
     @Test
@@ -32,14 +33,15 @@ class DashboardSectionsTest {
         val sections = dashboardSections(all, youAreHere = Park.EPCOT)
         val appearances = sections.flatMap { it.snapshots }.count { it.park == Park.EPCOT }
         assertEquals(1, appearances)
-        assertEquals(7, sections.sumOf { it.snapshots.size })
+        assertEquals(Park.entries.size, sections.sumOf { it.snapshots.size })
     }
 
     @Test
     fun `the rest of the resort still appears below`() {
         val sections = dashboardSections(all, youAreHere = Park.EPCOT)
         val disney = sections.single { it.title == "Walt Disney World" }
-        assertEquals(3, disney.snapshots.size)
+        val expected = Park.entries.count { it.resort == Resort.WALT_DISNEY_WORLD } - 1
+        assertEquals(expected, disney.snapshots.size)
         assertFalse(disney.snapshots.any { it.park == Park.EPCOT })
     }
 

@@ -33,6 +33,9 @@ PARKS = [
     ("UNIVERSAL_STUDIOS_FLORIDA", "way", 449808332, "Universal Studios Florida", (28.4757, -81.4686)),
     ("ISLANDS_OF_ADVENTURE", "relation", 1124085, "Universal Islands of Adventure", (28.4718, -81.4698)),
     ("EPIC_UNIVERSE", "way", 1372221500, "Universal Epic Universe", (28.4425, -81.4484)),
+    # Not a theme park — tagged tourism=attraction, landuse=retail — but the app treats it
+    # as a place you can be in, so it needs a footprint like the rest.
+    ("DISNEY_SPRINGS", "relation", 7932667, "Disney Springs", (28.3709, -81.5177)),
 ]
 
 # Not a park, and the reason this file exists at all: CityWalk abuts both Universal parks,

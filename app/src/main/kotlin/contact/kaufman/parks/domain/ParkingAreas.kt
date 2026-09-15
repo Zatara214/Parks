@@ -20,6 +20,9 @@ package contact.kaufman.parks.domain
  *   457" is level 4, row 57) and GPS has no usable vertical resolution inside a concrete
  *   deck. That stays a manual pick, as does the row everywhere.
  *
+ * Disney Springs is in here too. It is not a theme park, but the car parks work the same
+ * way: three garages (Orange, Lime, Grapefruit) and four surface lots named after fruit.
+ *
  * Gaps, all of them "OpenStreetMap has not mapped it yet" rather than anything subtler:
  * Hollywood Studios' **BB-8** lot, and four of Epic Universe's five sections (**Monster**,
  * **Viking**, **Gamer**, **Hero**). Epic's two big lots are mapped unnamed, so a fix there
@@ -329,5 +332,54 @@ object ParkingAreas {
             group = "South Garage",
             osmName = "Structure South",
             ring = doubleArrayOf(28.472111, -81.463246, 28.471236, -81.463643, 28.471230, -81.463465, 28.470479, -81.461780, 28.470557, -81.461736, 28.472944, -81.460337, 28.473754, -81.462157, 28.473567, -81.462337, 28.472210, -81.463128, 28.472247, -81.463218),
-        ),    )
+        ),        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Strawberry",
+            group = "Surface lots",
+            osmName = "Strawberry Parking Lot",
+            ring = doubleArrayOf(28.374052, -81.523897, 28.372894, -81.523860, 28.372894, -81.524248, 28.372236, -81.524273, 28.372038, -81.524084, 28.372102, -81.522451, 28.372145, -81.522398, 28.372878, -81.522420, 28.373006, -81.522424, 28.373000, -81.522671, 28.373736, -81.522705, 28.373794, -81.522642, 28.374414, -81.523721, 28.374336, -81.523940),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Orange",
+            group = "Garages",
+            osmName = "Orange Garage",
+            ring = doubleArrayOf(28.368059, -81.520382, 28.367947, -81.520061, 28.368840, -81.519661, 28.368866, -81.519730, 28.369638, -81.521956, 28.368745, -81.522357),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Lemon",
+            group = "Surface lots",
+            osmName = "Lemon Parking Lot",
+            ring = doubleArrayOf(28.372319, -81.513779, 28.372026, -81.513937, 28.372056, -81.513868, 28.371384, -81.514012, 28.371226, -81.514292, 28.370969, -81.514157, 28.370918, -81.514040, 28.370960, -81.513888, 28.371079, -81.513687, 28.371333, -81.513512, 28.371852, -81.513427, 28.372049, -81.513458, 28.372064, -81.513604, 28.372287, -81.513525),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Lime",
+            group = "Garages",
+            osmName = "Lime Garage",
+            ring = doubleArrayOf(28.369016, -81.515899, 28.369530, -81.516509, 28.370542, -81.515272, 28.370419, -81.515137, 28.370695, -81.514778, 28.370323, -81.514368),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Mango",
+            group = "Surface lots",
+            osmName = "Mango Parking Lot",
+            ring = doubleArrayOf(28.368848, -81.522434, 28.369035, -81.522897, 28.369209, -81.522897, 28.369966, -81.522515, 28.369794, -81.522070, 28.369597, -81.522126, 28.369563, -81.522013, 28.368952, -81.522289),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Grapefruit",
+            group = "Garages",
+            osmName = "Grapefruit Garage",
+            ring = doubleArrayOf(28.368193, -81.515632, 28.369384, -81.514203, 28.369511, -81.514053, 28.368896, -81.513356, 28.367500, -81.514900),
+        ),
+        Area(
+            park = Park.DISNEY_SPRINGS,
+            lot = "Watermelon",
+            group = "Surface lots",
+            osmName = "Watermelon Parking Lot",
+            ring = doubleArrayOf(28.371327, -81.525496, 28.370955, -81.525449, 28.370171, -81.525078, 28.369741, -81.524717, 28.369718, -81.524619, 28.369915, -81.524358, 28.370622, -81.523569, 28.370945, -81.523835, 28.371385, -81.524008),
+        ),
+    )
 }

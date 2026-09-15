@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.Resort
 import contact.kaufman.parks.domain.distanceMetersFrom
 import contact.kaufman.parks.ui.components.OfficialApps
@@ -124,7 +125,7 @@ fun ParkDetailScreen(
                         Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        ParkTab.entries.forEach { tab ->
+                        state.availableTabs().forEach { tab ->
                             FilterChip(
                                 selected = state.tab == tab,
                                 onClick = { viewModel.selectTab(tab) },
@@ -139,11 +140,16 @@ fun ParkDetailScreen(
                         Modifier.fillMaxWidth().padding(bottom = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        FilterChip(
-                            selected = state.hideClosed,
-                            onClick = viewModel::toggleHideClosed,
-                            label = { Text("Open only") },
-                        )
+                        // The destination feed carries no live status for Disney Springs, so
+                        // "Open only" there would filter on a fact the app does not have —
+                        // and did, hiding every restaurant behind a chip that looked wrong.
+                        if (state.hasLiveStatus()) {
+                            FilterChip(
+                                selected = state.hideClosed,
+                                onClick = viewModel::toggleHideClosed,
+                                label = { Text("Open only") },
+                            )
+                        }
                         if (state.tab == ParkTab.RIDES) {
                             state.availableSorts().forEach { sort ->
                                 FilterChip(
@@ -225,6 +231,9 @@ private fun ParkSummary(state: ParkDetailUiState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            // Disney Springs has no gate and publishes no hours the app can read, so
+            // "Closed today" would be both wrong and alarming.
+            if (snapshot.park.kind == ParkKind.DINING_DISTRICT) return@Column
             val hours = snapshot.todayRegularHours
             Text(
                 text = if (hours != null) formatHoursRange(hours.opening, hours.closing) else "Closed today",

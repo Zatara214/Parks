@@ -213,6 +213,22 @@ reconstruct a real trip without becoming a tracker itself.
 - [ ] Dwell detection, then the wait-sample cross-check for confidence.
 - [ ] Let it be wrong gracefully — everything editable or deletable by hand.
 
+### Disney Springs (Zak's request, 2026-09-15) — first pass done
+Not a theme park and not on themeparks.wiki, but somewhere Zak goes often, so it earns a
+place with the parts that do apply.
+
+- [x] Dashboard entry, location detection, and parking — boundary and car parks both came
+      from OSM. A fix in the Orange Garage prefills the section like any park.
+- [x] Restaurants — 38 of them, from the Walt Disney World *destination* feed filtered by
+      the Disney Springs boundary. They were there all along, just not under a park.
+- [ ] **Hours.** Nothing publishes them where the app can read them. The card and screen
+      show no hours at all rather than "Closed today".
+- [ ] **Crowd level.** There are no posted waits to rank, so the model has nothing to
+      measure. Would need a different signal entirely — foot traffic, parking occupancy —
+      and inventing one would be worse than the blank.
+- [ ] **Live open/closed per restaurant.** The destination feed carries no status, so rows
+      show no badge rather than a wrong one.
+
 ### Phase 4 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.
 - [ ] Notify when a watched ride drops below a wait threshold.

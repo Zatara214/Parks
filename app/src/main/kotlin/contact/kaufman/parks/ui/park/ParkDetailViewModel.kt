@@ -11,6 +11,7 @@ import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkEntity
+import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.ParkLands
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
@@ -82,6 +83,23 @@ data class ParkDetailUiState(
      */
     fun availableLands(): List<String> =
         snapshot?.park?.let(ParkLands::landsIn).orEmpty()
+
+    /**
+     * Which tabs to draw. Disney Springs has no rides and no shows, so offering empty tabs
+     * would invite a tap that answers nothing.
+     */
+    /**
+     * Does anything here report whether it is open?
+     *
+     * False for Disney Springs: its entries come from the destination feed, which carries
+     * no live status at all. Filtering on "open only" there hides everything, because
+     * "unknown" is not "operating" — a filter applied to a fact the app does not have.
+     */
+    fun hasLiveStatus(): Boolean = snapshot?.park?.kind != ParkKind.DINING_DISTRICT
+
+    fun availableTabs(): List<ParkTab> =
+        if (snapshot?.park?.kind == ParkKind.DINING_DISTRICT) listOf(ParkTab.DINING)
+        else ParkTab.entries
 }
 
 @HiltViewModel(assistedFactory = ParkDetailViewModel.Factory::class)
@@ -106,6 +124,10 @@ class ParkDetailViewModel @AssistedInject constructor(
     val state: StateFlow<ParkDetailUiState> = _state.asStateFlow()
 
     init {
+        // Disney Springs opens on its only tab rather than an empty Rides list.
+        if (park.kind == ParkKind.DINING_DISTRICT) {
+            _state.update { it.copy(tab = ParkTab.DINING) }
+        }
         // Show whatever the dashboard already fetched immediately, then refresh behind it.
         repository.cached(park)?.let { cached ->
             _state.update { it.copy(snapshot = cached, weather = cached.weather, isLoading = false) }
@@ -193,7 +215,7 @@ fun ParkDetailUiState.visibleEntities(): List<ParkEntity> {
         ParkTab.DINING -> EntityKind.RESTAURANT
     }
     val filtered = all.filter { it.kind == kind }
-        .filter { !hideClosed || it.isOperating }
+        .filter { !hideClosed || !hasLiveStatus() || it.isOperating }
         // Land is a ride-list idea. Shows and restaurants are short enough lists to read
         // whole, and their coordinates are patchier.
         .filter { land == null || tab != ParkTab.RIDES || it.land() == land }

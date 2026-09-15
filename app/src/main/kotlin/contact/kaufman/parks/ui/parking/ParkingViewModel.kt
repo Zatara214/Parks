@@ -39,11 +39,23 @@ data class ParkingFormState(
     /** A spot with neither a lot nor a row records nothing useful. */
     val canSave: Boolean get() = park != null && (lot.isNotBlank() || row.isNotBlank())
 
-    /** What the sign actually reads: Universal merges level and row into one number. */
-    fun signRow(): String = when {
-        level.isBlank() -> row.trim()
-        row.isBlank() -> level.trim()
-        else -> level.trim() + row.trim().padStart(2, '0')
+    /**
+     * What the sign actually reads.
+     *
+     * Universal merges level and row into one number — "Cat in the Hat 457" is level 4,
+     * row 57 — so the two are glued back together there. **Disney Springs does not.** Its
+     * garages have levels, but nothing on the sign concatenates them with a row, so gluing
+     * would invent a number that appears nowhere in the car park.
+     */
+    fun signRow(): String {
+        val level = level.trim()
+        val row = row.trim()
+        return when {
+            level.isBlank() -> row
+            row.isBlank() -> if (park?.mergesLevelIntoRow == true) level else "Level $level"
+            park?.mergesLevelIntoRow == true -> level + row.padStart(2, '0')
+            else -> "Level $level · $row"
+        }
     }
 
     /**

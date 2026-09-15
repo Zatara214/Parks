@@ -12,6 +12,8 @@ import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.ForecastPoint
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.ParkKind
+import contact.kaufman.parks.domain.ParkBoundaries
 import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.ParkHours
 import contact.kaufman.parks.domain.ParkSnapshot
@@ -51,6 +53,9 @@ class ParksRepository @Inject constructor(
     private val weatherCache = mutableMapOf<String, ParkWeather>()
     private val childrenCache = mutableMapOf<Park, List<ChildEntityDto>>()
 
+    /** Disney Springs' restaurants live under the resort-wide entity, not a park's. */
+    private var destinationChildrenCache: List<ChildEntityDto>? = null
+
     fun cached(park: Park): ParkSnapshot? = snapshots[park]
 
     fun today(): LocalDate = Clock.System.now().toLocalDateTime(parkTimeZone).date
@@ -64,6 +69,10 @@ class ParksRepository @Inject constructor(
     suspend fun refresh(park: Park, force: Boolean = false): ParkSnapshot = coroutineScope {
         val existing = snapshots[park]
         if (!force && existing != null && existing.isFresh()) return@coroutineScope existing
+
+        if (park.kind == ParkKind.DINING_DISTRICT) {
+            return@coroutineScope refreshDiningDistrict(park, existing)
+        }
 
         val liveJob = async { runCatching { api.live(park.id) } }
         val scheduleJob = async { runCatching { api.schedule(park.id) } }
@@ -114,6 +123,54 @@ class ParksRepository @Inject constructor(
             fetchedAt = Clock.System.now(),
             error = null,
         ).also { snapshots[park] = it }
+    }
+
+    /**
+     * Disney Springs, which has no themeparks.wiki entity of its own.
+     *
+     * Its restaurants are in the feed, just filed under the Walt Disney World
+     * **destination** rather than a park — so they are fetched once from there and
+     * selected by the mapped Disney Springs boundary. That is the whole snapshot: no live
+     * status, because the destination feed carries none; no hours, because nothing
+     * publishes them; and no crowd level, because there are no posted waits to rank.
+     *
+     * Saying "no data" honestly beats inventing a number, and the card is built to show
+     * less rather than to show blanks.
+     */
+    private suspend fun refreshDiningDistrict(park: Park, existing: ParkSnapshot?): ParkSnapshot {
+        val children = destinationChildren()
+        if (children.isEmpty()) {
+            return (existing ?: ParkSnapshot(park))
+                .copy(error = if (existing == null) "Couldn't reach themeparks.wiki" else existing.error)
+                .also { snapshots[park] = it }
+        }
+
+        val entities = children
+            .filter { child ->
+                val lat = child.location?.latitude
+                val lon = child.location?.longitude
+                lat != null && lon != null && ParkBoundaries.parkAt(lat, lon) == park
+            }
+            .mapNotNull { it.toDiningEntity(park) }
+            .sortedBy { it.name }
+
+        return ParkSnapshot(
+            park = park,
+            entities = entities,
+            weather = existing?.weather,
+            fetchedAt = Clock.System.now(),
+            error = null,
+        ).also { snapshots[park] = it }
+    }
+
+    /** The destination's own child list, cached for the process — it is a large response
+     *  and its contents change on the timescale of restaurants opening, not minutes. */
+    private suspend fun destinationChildren(): List<ChildEntityDto> {
+        destinationChildrenCache?.let { return it }
+        return runCatching { api.children(WALT_DISNEY_WORLD_DESTINATION_ID).children }
+            .onFailure { Log.w(TAG, "destination children fetch failed", it) }
+            .getOrDefault(emptyList())
+            .also { if (it.isNotEmpty()) destinationChildrenCache = it }
     }
 
     suspend fun refreshAll(force: Boolean = false): List<ParkSnapshot> = coroutineScope {
@@ -295,3 +352,33 @@ private fun ScheduleEntryDto.toParkHours() = ParkHours(
  *  down a whole refresh — a missing time just renders as absent. */
 private fun String?.toInstantOrNull(): Instant? =
     this?.let { runCatching { Instant.parse(it) }.getOrNull() }
+
+/**
+ * The Walt Disney World destination entity.
+ *
+ * Its `/children` is the only place Disney Springs' restaurants appear — they are not under
+ * any park, because Disney Springs is not one. Verified against `/v1/destinations`
+ * 2026-09-15.
+ */
+private const val WALT_DISNEY_WORLD_DESTINATION_ID = "e957da41-3552-4cf6-b636-5babc5cbc4e5"
+
+/**
+ * A destination child as a dining entry.
+ *
+ * The destination feed has no live status, so everything here is a name and a place. The
+ * status is [OperatingStatus.UNKNOWN] rather than OPERATING: the app genuinely does not
+ * know whether this restaurant is open, and claiming otherwise would be worse than the
+ * blank the UI draws for it.
+ */
+private fun ChildEntityDto.toDiningEntity(park: Park): ParkEntity? {
+    if (entityType != "RESTAURANT") return null
+    return ParkEntity(
+        id = id,
+        name = name,
+        kind = EntityKind.RESTAURANT,
+        park = park,
+        status = OperatingStatus.UNKNOWN,
+        latitude = location?.latitude,
+        longitude = location?.longitude,
+    )
+}

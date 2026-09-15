@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import contact.kaufman.parks.domain.EntityKind
+import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.ui.components.CrowdPill
 import contact.kaufman.parks.ui.components.formatHoursRange
@@ -99,22 +102,42 @@ fun ParkCard(
             }
 
             val hours = snapshot.todayRegularHours
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(
-                    Icons.Default.Schedule,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = if (hours != null) {
-                        formatHoursRange(hours.opening, hours.closing)
-                    } else {
-                        "Closed today"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // Disney Springs publishes no hours anywhere the app can read, and it has no
+            // gate to close, so "Closed today" would be both wrong and alarming. It gets a
+            // count of what it does have instead.
+            if (snapshot.park.kind == ParkKind.DINING_DISTRICT) {
+                val places = snapshot.entities.count { it.kind == EntityKind.RESTAURANT }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        Icons.Default.Storefront,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = if (places > 0) "$places places to eat" else "Shops and dining",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = if (hours != null) {
+                            formatHoursRange(hours.opening, hours.closing)
+                        } else {
+                            "Closed today"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Hard-ticket nights are the single most confusing thing about park hours —
