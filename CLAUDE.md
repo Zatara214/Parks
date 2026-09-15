@@ -195,6 +195,47 @@ Two traps already hit:
   the Play Store as installed here — and why the `market://` step is wrapped in
   `runCatching` rather than pre-resolved. Both hold up on this AVD; keep them that way.
 
+## Which park you are in
+- `domain/ParkBoundaries.kt` holds real **mapped footprints** for all seven parks, plus
+  CityWalk. `Geo.parkAt` is a thin delegate to it. **Generated — do not hand-edit**: run
+  `python3 tools/park-boundaries.py` to refresh.
+- **Regenerate when a park's footprint changes.** Magic Kingdom is expanding, so this will
+  be needed. A park that grows outside its old shape simply stops being detected in the new
+  part: a staleness bug, not a mystery. The script fetches by OSM element id, checks each
+  park's declared coordinate still lands inside the shape it fetched, checks CityWalk stays
+  disjoint from both Universal parks, and refuses to write the table if any of that fails.
+- **What this replaced, and why it mattered more than it looked.** The old test was "nearest
+  park centre within 1,200m". Measured against the mapped footprints it put only **80.7% of
+  Universal Studios** in the right park — not a strip by the wall, a fifth of the park — and
+  claimed **100% of CityWalk** was inside a park. USF and Islands of Adventure share a wall,
+  so no arrangement of centres can separate them.
+- **CityWalk is in the table with a null `park`.** It abuts both Universal parks, so "not a
+  park" has to be an explicit answer rather than a gap between two polygons, and it is
+  checked *before* the parks. `ParkBoundaries.at` returns the shape if you need to tell
+  "CityWalk" from "nowhere"; `parkAt` collapses both to null.
+- `EXPANSION_TOLERANCE_METERS` (150m) absorbs a fix that has drifted past a fence and buys
+  slack when a park grows before anyone regenerates. It applies **only when exactly one
+  park is in range** — near the USF/IOA wall both qualify and the answer stays null, because
+  nearer is not the same as right.
+- A ride-position heuristic was measured and rejected. Nearest-ride is good at which-park
+  (99.7% USF, 96.7% IOA) but **cannot exclude CityWalk**: in-park points are up to 285m
+  from their nearest ride while CityWalk gets within 31m of one, so no distance cap
+  separates them. Every setting either strands you in CityWalk or ejects you from a park
+  you are standing in.
+- **Not exact at the gates, on purpose.** Four parking lots closest to an entrance —
+  EPCOT's Eve, Hollywood Studios' Mickey and Olaf, Epic's Explorer — still report as being
+  in the park, either because the OSM footprint takes in the entrance plaza or because they
+  fall inside the 150m tolerance. Left alone: standing in the Eve lot, "You're here ·
+  EPCOT" is the answer a person would give. It is also a big improvement on the old 1,200m
+  radius, under which **every** lot reported in-park. Parking detection is unaffected —
+  `ParkingAreas` is a separate table and still names the lot.
+- **Three of the seven coordinates in `domain/Parks.kt` were wrong** and were corrected
+  2026-09-15 to interior points, pinned by a test. Animal Kingdom's and Universal Studios'
+  sat outside their own footprints; **Epic Universe's was 3.6km out, down by SeaWorld**, so
+  Epic could never be detected and `Geo.resortCenter` dragged Universal's weather point a
+  kilometre south. Nothing decides which park you are in from these any more, but weather
+  still averages them.
+
 ## Location
 - `data/location/LocationProvider.kt` uses the **platform `LocationManager`**, not Play
   Services' fused client: no Google dependency, which is the point of this app. Single fix
@@ -229,6 +270,21 @@ Two traps already hit:
   demand, so the window opens on launch and shuts as soon as a fix lands — hence
   force-stop, relaunch, then loop the fix for a few seconds. Sending it to an app that is
   not running does nothing at all, verified.
+- **To move to a *second* position, flush the cached fix first.** This is the step that
+  bites: once any fix is cached, `getCurrentLocation` returns it instantly, the request
+  shuts before your `geo fix` arrives, and the app keeps reporting the **first** position
+  while `adb emu geo fix` keeps answering `OK`. It looks exactly like a broken geofence.
+  Two screenshots of three different simulated locations came out identical before this
+  was understood. Toggle location off and on between positions:
+  ```
+  adb shell am force-stop contact.kaufman.parks.debug
+  adb shell settings put secure location_mode 0; sleep 2
+  adb shell settings put secure location_mode 3; sleep 1
+  adb shell am start -n contact.kaufman.parks.debug/contact.kaufman.parks.MainActivity
+  for i in $(seq 1 10); do adb emu geo fix <lon> <lat>; sleep 1; done
+  ```
+  Always confirm the device actually moved before believing a screenshot:
+  `adb shell dumpsys location | grep -m1 "last location=Location\[gps"`.
   Confirmed end to end twice: the dashboard pinned "You're here · Islands of Adventure"
   and then "· Animal Kingdom", and the weather strip moved between Universal's 76°/feels
   84° and Disney's 78°/feels 87° — which incidentally exercises the per-resort split.

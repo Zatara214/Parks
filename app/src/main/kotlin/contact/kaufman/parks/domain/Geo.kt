@@ -36,25 +36,18 @@ object Geo {
     /**
      * Which park a position is in, or null when it is none of them.
      *
-     * This compares against park **centres**, which is the crude part. Magic Kingdom and
-     * EPCOT are miles apart and never confusable, but Universal Studios and Islands of
-     * Adventure share a wall — their centres are about 500m apart, so a poor fix near the
-     * boundary can land on the wrong one. Real polygons would settle it; see the
-     * parking-geofence section of PLAN.md.
+     * Answered from real boundaries — see [ParkBoundaries]. This used to compare against
+     * park **centres** inside a 1,200m radius, which sounded reasonable and was not:
+     * measured against the mapped footprints it put only 80.7% of Universal Studios in the
+     * right park, and reported 100% of CityWalk as being inside a park. Universal Studios
+     * and Islands of Adventure share a wall, so no arrangement of centres can separate
+     * them, and CityWalk sits between the two with no centre of its own to lose to.
+     *
+     * Null now means "not in a park" and includes CityWalk, which is a real answer rather
+     * than a gap. Use `ParkBoundaries.at` if you need to tell those two cases apart.
      */
-    fun parkAt(
-        latitude: Double,
-        longitude: Double,
-        withinMeters: Double = DEFAULT_PARK_RADIUS_METERS,
-    ): Park? = Park.entries
-        .map { it to distanceMeters(latitude, longitude, it.latitude, it.longitude) }
-        .filter { (_, distance) -> distance <= withinMeters }
-        .minByOrNull { (_, distance) -> distance }
-        ?.first
-
-    /** Generous enough to cover a whole park from its centre, tight enough that the
-     *  parking lots and the interstate do not count as being in one. */
-    const val DEFAULT_PARK_RADIUS_METERS = 1_200.0
+    fun parkAt(latitude: Double, longitude: Double): Park? =
+        ParkBoundaries.parkAt(latitude, longitude)
 
     /**
      * Is a position inside a polygon?

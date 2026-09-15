@@ -23,8 +23,8 @@ class ParkingAreasTest {
     }
 
     /**
-     * The whole reason the table exists. `Geo.parkAt` compares against park centres and
-     * deliberately excludes the lots, so it cannot answer this at all.
+     * The whole reason this table exists separately from `ParkBoundaries`: knowing which
+     * park you are at does not tell you which lot you left the car in.
      */
     @Test
     fun `the Universal garages are told apart rather than collapsed`() {

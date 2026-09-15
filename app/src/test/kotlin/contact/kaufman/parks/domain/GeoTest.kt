@@ -44,9 +44,9 @@ class GeoTest {
     }
 
     /**
-     * The known weak spot. USF and IOA share a wall, so their centres are close enough
-     * that a fix near the boundary can resolve to the wrong one. This pins the distance
-     * so that if the coordinates are ever edited, the tightness is not a surprise.
+     * USF and Islands of Adventure still have close centres — they share a wall, so they
+     * always will. What changed is that it no longer decides anything: `parkAt` reads real
+     * boundaries. This stays as a reminder of why, so nobody reintroduces a radius test.
      */
     @Test
     fun `Universal Studios and Islands of Adventure are uncomfortably close`() {
@@ -55,18 +55,6 @@ class GeoTest {
             Park.ISLANDS_OF_ADVENTURE.latitude, Park.ISLANDS_OF_ADVENTURE.longitude,
         )
         assertTrue("centres are $meters m apart", meters < 1_000.0)
-    }
-
-    @Test
-    fun `the nearest park wins when two are in range`() {
-        // A point nudged towards Islands of Adventure from the midpoint.
-        val lat = (Park.UNIVERSAL_STUDIOS_FLORIDA.latitude + Park.ISLANDS_OF_ADVENTURE.latitude) / 2
-        val lon = (Park.UNIVERSAL_STUDIOS_FLORIDA.longitude + Park.ISLANDS_OF_ADVENTURE.longitude) / 2
-        val nudged = Geo.parkAt(
-            latitude = lat - 0.002,
-            longitude = lon - 0.002,
-        )
-        assertEquals(Park.ISLANDS_OF_ADVENTURE, nudged)
     }
 
     @Test
