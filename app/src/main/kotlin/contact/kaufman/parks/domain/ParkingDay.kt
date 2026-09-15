@@ -48,6 +48,21 @@ object ParkingDay {
     private fun rolloverOn(date: LocalDate): Instant =
         LocalDateTime(date, LocalTime(ROLLOVER_HOUR, 0)).toInstant(TIME_ZONE)
 
+    /**
+     * Which park day an instant belongs to.
+     *
+     * The small hours belong to the night before, by the same reasoning as the rollover
+     * above: leaving a Halloween party at 00:30 is still part of that evening's trip, and
+     * filing it under the next date would split one outing across two days in the history.
+     *
+     * Trip history reuses this rather than defining its own "today". Two different answers
+     * to the same question inside one app is worse than either answer.
+     */
+    fun dayOf(at: Instant): LocalDate {
+        val local = at.toLocalDateTime(TIME_ZONE)
+        return if (local.hour < ROLLOVER_HOUR) local.date.minus(1, DateTimeUnit.DAY) else local.date
+    }
+
     /** True once [parkedAt] falls on the far side of the most recent rollover. */
     fun hasExpired(parkedAtEpochSeconds: Long, now: Instant): Boolean =
         parkedAtEpochSeconds < mostRecentRollover(now).epochSeconds

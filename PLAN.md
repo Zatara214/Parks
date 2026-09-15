@@ -192,8 +192,15 @@ reconstruct a real trip without becoming a tracker itself.
   vanish entirely.
 
 #### Steps
-- [ ] Local trip history first, working with no Dawarich at all: a `trips` table, a day's
-      visits derived from what the app itself saw, and a screen to read it.
+- [x] **Local trip history — done 2026-09-15.** `park_sightings` (park id + timestamp, no
+      coordinates), written where a fix already resolves to a park, debounced to one row per
+      park per 10 minutes. `groupSightings` builds per-day visits on the shared 4AM
+      rollover. A Trips screen off the dashboard top bar, with a per-day Forget and an
+      empty state that explains what fills it. Room migration 1 → 2, verified by installing
+      over the previous build and confirming the parking record survived.
+      One rule was reversed by testing: visits are **not** split on gaps. A three-hour
+      threshold turned one realistic day at Magic Kingdom into three visits, and no
+      threshold works, because the app cannot tell a pocket from a drive home.
 - [ ] Settings: optional Dawarich base URL and API key, off by default, with an explicit
       "test connection" so a typo fails visibly rather than silently.
 - [ ] Dawarich client: one day, one park bbox, `slim=true`, paged.

@@ -160,3 +160,28 @@ interface ParkingDao {
         return insert(record)
     }
 }
+
+@Dao
+interface ParkSightingDao {
+
+    /**
+     * Sightings newest first, capped well above a realistic trip count so the trip screen
+     * never has to page but a long-lived install cannot load an unbounded list either.
+     */
+    @Query("SELECT * FROM park_sightings ORDER BY seenAtEpochSeconds DESC LIMIT :limit")
+    fun recent(limit: Int = 5_000): Flow<List<ParkSightingEntity>>
+
+    /**
+     * The most recent sighting of this park, used to avoid writing a row every few seconds
+     * while the dashboard is open. Reading one row beats making the caller hold state that
+     * would be lost on a process death anyway.
+     */
+    @Query("SELECT * FROM park_sightings WHERE parkId = :parkId ORDER BY seenAtEpochSeconds DESC LIMIT 1")
+    suspend fun latestFor(parkId: String): ParkSightingEntity?
+
+    @Insert
+    suspend fun insert(sighting: ParkSightingEntity)
+
+    @Query("DELETE FROM park_sightings WHERE seenAtEpochSeconds >= :fromEpochSeconds AND seenAtEpochSeconds <= :toEpochSeconds")
+    suspend fun deleteBetween(fromEpochSeconds: Long, toEpochSeconds: Long)
+}

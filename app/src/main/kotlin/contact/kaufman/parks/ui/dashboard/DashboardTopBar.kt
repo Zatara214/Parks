@@ -1,6 +1,7 @@
 package contact.kaufman.parks.ui.dashboard
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +23,7 @@ import contact.kaufman.parks.ui.components.toParkDateHeading
 fun DashboardTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onSettingsClick: () -> Unit,
+    onTripsClick: () -> Unit,
     weather: @Composable () -> Unit,
 ) {
     // Reactive: reading the clock inline left the date stuck on yesterday until the bar
@@ -37,6 +39,11 @@ fun DashboardTopBar(
             }
         },
         actions = {
+            // Trip history is a feature rather than a setting, so it gets its own action
+            // instead of being buried a level down next to the licence list.
+            IconButton(onClick = onTripsClick) {
+                Icon(Icons.Default.History, contentDescription = "Trips")
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Default.Settings, contentDescription = "Settings")
             }

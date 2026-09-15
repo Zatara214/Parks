@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import contact.kaufman.parks.data.db.ParkingRecordEntity
 import contact.kaufman.parks.data.repo.ParkingRepository
 import contact.kaufman.parks.data.location.LocationProvider
+import contact.kaufman.parks.data.repo.TripRepository
 import contact.kaufman.parks.data.prefs.SettingsStore
 import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
@@ -42,6 +43,7 @@ class DashboardViewModel @Inject constructor(
     private val parks: ParksRepository,
     private val parkingRepository: ParkingRepository,
     private val location: LocationProvider,
+    private val trips: TripRepository,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -90,6 +92,10 @@ class DashboardViewModel @Inject constructor(
             // two look identical from the UI.
             Log.d(TAG, "fix ${fix.latitude},${fix.longitude} (${fix.provider}) -> ${park?.displayName ?: "no park"}")
             _state.value = _state.value.copy(youAreHere = park)
+            // The one piece of evidence trip history is built from. Recorded here rather
+            // than inside Geo.parkAt so that merely asking "which park is this?" never
+            // writes anything — a fix taken for the weather is not a visit.
+            if (park != null) trips.noteSighting(park)
             // The header should report the weather where you actually are. Standing at
             // Islands of Adventure while it reads Walt Disney World is just wrong.
             if (park != null && park.resort != Resort.WALT_DISNEY_WORLD) {

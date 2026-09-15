@@ -6,6 +6,7 @@ import contact.kaufman.parks.BuildConfig
 import contact.kaufman.parks.data.db.DailyWaitAverageDao
 import contact.kaufman.parks.data.db.ParkCrowdDao
 import contact.kaufman.parks.data.db.ParkingDao
+import contact.kaufman.parks.data.db.ParkSightingDao
 import contact.kaufman.parks.data.db.ParksDatabase
 import contact.kaufman.parks.data.db.WaitSampleDao
 import dagger.Module
@@ -60,10 +61,13 @@ object AppModule {
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): ParksDatabase =
-        Room.databaseBuilder(context, ParksDatabase::class.java, ParksDatabase.NAME).build()
+        Room.databaseBuilder(context, ParksDatabase::class.java, ParksDatabase.NAME)
+            .addMigrations(ParksDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides fun waitSampleDao(db: ParksDatabase): WaitSampleDao = db.waitSamples()
     @Provides fun dailyAverageDao(db: ParksDatabase): DailyWaitAverageDao = db.dailyAverages()
     @Provides fun parkCrowdDao(db: ParksDatabase): ParkCrowdDao = db.parkCrowd()
     @Provides fun parkingDao(db: ParksDatabase): ParkingDao = db.parking()
+    @Provides fun parkSightingDao(db: ParksDatabase): ParkSightingDao = db.parkSightings()
 }

@@ -6,6 +6,7 @@ import contact.kaufman.parks.data.location.LocationProvider
 import contact.kaufman.parks.data.prefs.SettingsStore
 import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
+import contact.kaufman.parks.data.repo.TripRepository
 import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
@@ -73,6 +74,7 @@ class ParkDetailViewModel @AssistedInject constructor(
     @Assisted private val park: Park,
     private val repository: ParksRepository,
     private val location: LocationProvider,
+    private val trips: TripRepository,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -139,6 +141,10 @@ class ParkDetailViewModel @AssistedInject constructor(
         viewModelScope.launch {
             val fix = location.current()?.takeIf { Geo.parkAt(it.latitude, it.longitude) == park }
             _state.update { it.copy(fix = fix?.let { f -> InParkFix(f.latitude, f.longitude) }) }
+            // Opening a park's screen while standing in it is evidence of a visit, and
+            // often the only evidence on a day spent inside one park without ever
+            // returning to the dashboard.
+            if (fix != null) trips.noteSighting(park)
         }
     }
 

@@ -21,6 +21,7 @@ import contact.kaufman.parks.ui.park.ParkDetailScreen
 import contact.kaufman.parks.ui.parking.ParkingScreen
 import contact.kaufman.parks.ui.settings.AboutScreen
 import contact.kaufman.parks.ui.settings.SettingsScreen
+import contact.kaufman.parks.ui.trips.TripsScreen
 
 private const val DURATION = 320
 
@@ -64,6 +65,7 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
                     onParkClick = { park -> push(ParkDetailKey(park.id)) },
                     onParkingClick = { push(ParkingKey(null)) },
                     onSettingsClick = { push(SettingsKey) },
+                    onTripsClick = { push(TripsKey) },
                 )
             }
             entry<ParkDetailKey> { key ->
@@ -85,6 +87,9 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
                     initialPark = key.parkId?.let(Park::fromId),
                     onBack = { backStack.removeLastOrNull() },
                 )
+            }
+            entry<TripsKey> {
+                TripsScreen(onBack = { backStack.removeLastOrNull() })
             }
             entry<SettingsKey> {
                 SettingsScreen(

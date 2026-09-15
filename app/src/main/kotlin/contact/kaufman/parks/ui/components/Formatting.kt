@@ -3,6 +3,7 @@ package contact.kaufman.parks.ui.components
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 val ParkTimeZone: TimeZone = TimeZone.of("America/New_York")
@@ -36,3 +37,19 @@ fun LocalDate.toParkDateHeading(): String {
 /** MONDAY -> Monday. The enum names arrive shouting. */
 private fun String.titleCase(): String =
     lowercase().replaceFirstChar { it.uppercase() }
+
+/**
+ * "8h 28m", or "45m" under an hour.
+ *
+ * No seconds and no zero-padding: this describes a day out, where a minute either way is
+ * noise, and "8h 0m" reads like a machine wrote it.
+ */
+fun Duration.toTripLength(): String {
+    val hours = inWholeHours
+    val minutes = inWholeMinutes % 60
+    return when {
+        hours == 0L -> "${minutes}m"
+        minutes == 0L -> "${hours}h"
+        else -> "${hours}h ${minutes}m"
+    }
+}

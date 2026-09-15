@@ -18,3 +18,6 @@ data object SettingsKey : NavKey
 
 @Serializable
 data object AboutKey : NavKey
+
+@Serializable
+data object TripsKey : NavKey

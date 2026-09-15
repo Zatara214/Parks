@@ -295,10 +295,58 @@ Two traps already hit:
   easy to run these, see the position change, and credit the wrong command — the change is
   a `geo fix` from moments earlier landing late. That mis-attribution happened while
   writing this note.
-- The clock-change wedge described previously was **not** reproduced here, and the
-  `ProviderRequest[OFF]` symptom showed up on a cold-booted AVD whose clock was never
-  touched — so the clock was probably never the cause. The cached-fix behaviour above
-  explains the original symptom without it.
+- **The clock-change wedge is real, and a plain restart does not clear it.** An earlier
+  version of this note said it had not been reproduced; that was wrong, and reproducing it
+  cost an hour. Setting the emulator's date forward to test the dashboard's date rollover
+  killed its GPS: afterwards `adb emu geo fix` answered `OK` forever while
+  `dumpsys location` showed the AVD's **persisted** last-known fix, hours stale and
+  unchanged, with `ProviderRequest[OFF]` immediately after launch. Restarting the AVD did
+  **not** help, because that fix is persisted in userdata.
+  What clears it is a wipe:
+  ```
+  adb emu kill
+  emulator -avd android37 -no-window -no-audio -no-boot-anim -gpu host -wipe-data
+  ```
+  After that `dumpsys location` reports no gps fix at all and `geo fix` lands first try.
+  The cost is the app and its database, so **do the clock test last**, or expect to
+  reinstall and re-grant `ACCESS_FINE_LOCATION` afterwards.
+- There is a second, subtler reason a stale fix blocks everything: `LocationProvider`
+  rejects any fix older than five minutes, so a persisted one is discarded — but
+  `getCurrentLocation` still returns it *instantly* from cache for each provider in turn,
+  so the GPS request opens and shuts before a `geo fix` can arrive. Flooding fixes during
+  launch does not beat it. Only the wipe does.
+
+## Trip history
+- `park_sightings` stores one dumb row per moment the app could see you were in a park —
+  park id and a timestamp, **no coordinates**. The park is the whole answer; the fix that
+  produced it is nobody's business afterwards, this app's included.
+- Written from the two places a fix already resolves to a park: the dashboard's
+  `detectPark` and the park screen's `locate`. Recorded at those call sites rather than
+  inside `Geo.parkAt`, so merely asking "which park is this?" never writes anything — a fix
+  taken for the weather is not a visit.
+- **Debounced to one row per park per 10 minutes** (`TripRepository.SIGHTING_INTERVAL`).
+  The dashboard takes a fix every time it opens, and opening it six times in a queue would
+  otherwise inflate the sighting count until it stopped meaning anything.
+- `groupSightings` turns rows into visits. Two rules worth knowing:
+  - **Park days, not calendar days** — it reuses `ParkingDay.dayOf`, so a 00:35 sighting
+    after a hard-ticket night files under the evening before. Verified on device: a visit
+    reads "10:10 PM – 12:35 AM".
+  - **Visits are not split on gaps, deliberately.** The first version started a new visit
+    after three hours of silence. Against a realistic day — app opened at 9:12, 1pm and
+    7:40pm — that produced *three* visits from one continuous day at Magic Kingdom, because
+    sightings only happen when a screen asks for a fix. No threshold fixes it: the app
+    cannot see you leave, only the absence of evidence, and a phone in a pocket looks
+    exactly like a drive home. A test pins this.
+- The consequence, accepted: on a park-hopping day the two spans can overlap, because an
+  all-day Magic Kingdom visit with an EPCOT trip inside it is what the evidence actually
+  supports. `ParkVisit.sightings` is surfaced so the reader can see how thin a span is.
+- A single sighting shows a **time, not a span** (`hasMeaningfulDuration`) — "9:12 AM –
+  9:12 AM · 0m" would be worse than saying nothing.
+- **The empty state has to explain itself.** This screen cannot fill itself in, so a blank
+  one reads as broken. It says days appear once you open the app at a park, and that
+  nothing is recorded in the background.
+- Dawarich is the planned optional source for ride-level detail — see PLAN.md Phase 3. The
+  local path must keep working entirely without it.
 
 ## Wait-time history
 - An expanded ride shows two charts: Disney's **forecast** for the hours left today, and
@@ -327,6 +375,11 @@ Two traps already hit:
 - Hard-ticket nights (Halloween Horror Nights, Not-So-Scary) arrive as separate
   `TICKETED_EVENT` schedule rows and are surfaced on the card. This is the single most
   confusing thing about park hours — a park "closes" at 6 and reopens on a separate ticket.
+- **Room schema changes need a real `Migration`**, never a destructive fallback. Zak runs
+  released builds on his own phone: the parking records and the months of wait samples the
+  crowd model converges on are irreplaceable. `MIGRATION_1_2` (adding `park_sightings`) is
+  the pattern — and verify it by installing over the previous build and checking the data
+  survived, not just by building.
 - Commit straight to `main`. Releases are tags `vX.Y.Z`; CI builds and publishes the signed
   APK. versionCode = major*10000 + minor*100 + patch, derived from the tag.
 
