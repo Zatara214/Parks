@@ -10,9 +10,8 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
+import contact.kaufman.parks.ui.components.rememberParkToday
+import contact.kaufman.parks.ui.components.toParkDateHeading
 
 /**
  * Uses the expressive `LargeFlexibleTopAppBar` rather than the classic large bar: it
@@ -25,13 +24,15 @@ fun DashboardTopBar(
     onSettingsClick: () -> Unit,
     weather: @Composable () -> Unit,
 ) {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.of("America/New_York")).date
+    // Reactive: reading the clock inline left the date stuck on yesterday until the bar
+    // happened to be rebuilt by navigation. See rememberParkToday.
+    val today = rememberParkToday()
 
     LargeFlexibleTopAppBar(
         title = { Text("Today") },
         subtitle = {
             Column {
-                Text("${today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${today.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${today.day}")
+                Text(today.toParkDateHeading())
                 weather()
             }
         },

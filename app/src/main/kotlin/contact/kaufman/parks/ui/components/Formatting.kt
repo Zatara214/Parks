@@ -1,5 +1,6 @@
 package contact.kaufman.parks.ui.components
 
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
@@ -24,3 +25,14 @@ fun formatHoursRange(opening: Instant?, closing: Instant?): String = when {
     closing != null -> "Closes ${closing.toParkClockTime()}"
     else -> "Hours unavailable"
 }
+
+/** "Monday, September 15" — the dashboard subtitle. */
+fun LocalDate.toParkDateHeading(): String {
+    val weekday = dayOfWeek.name.titleCase()
+    val monthName = month.name.titleCase()
+    return "$weekday, $monthName $day"
+}
+
+/** MONDAY -> Monday. The enum names arrive shouting. */
+private fun String.titleCase(): String =
+    lowercase().replaceFirstChar { it.uppercase() }

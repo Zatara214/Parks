@@ -73,6 +73,8 @@ fun ParkingPin(
 
 private fun ParkingRecordEntity.spotLabel(): String {
     val place = listOf(lot, row).filter { it.isNotBlank() }.joinToString(" ")
-    val park = Park.fromId(parkId)?.shortName
+    // The full name, not the abbreviation. Nowhere else in the app calls it "MK", and the
+    // card has the room.
+    val park = Park.fromId(parkId)?.displayName
     return listOfNotNull(place.takeIf { it.isNotBlank() }, park?.let { "· $it" }).joinToString(" ")
 }
