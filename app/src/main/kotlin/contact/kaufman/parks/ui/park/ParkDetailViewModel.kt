@@ -11,9 +11,11 @@ import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkEntity
+import contact.kaufman.parks.domain.ParkLands
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
 import contact.kaufman.parks.domain.distanceMetersFrom
+import contact.kaufman.parks.domain.land
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -59,6 +61,8 @@ data class ParkDetailUiState(
     val weather: ParkWeather? = null,
     val isLoadingWeather: Boolean = false,
     val fix: InParkFix? = null,
+    /** null means "every land" — the default, and the only option where none are mapped. */
+    val land: String? = null,
 ) {
     /**
      * Sorting by distance is only offered once there is a fix inside this park, so the
@@ -67,6 +71,17 @@ data class ParkDetailUiState(
      */
     fun availableSorts(): List<RideSort> =
         RideSort.entries.filter { it != RideSort.NEARBY || fix != null }
+
+    /**
+     * The lands to offer, or empty where none are mapped.
+     *
+     * Empty means the filter row is not drawn at all. Islands of Adventure taught the
+     * lesson in reverse — it looked unmapped until relations were read properly — but the
+     * case is real for any park OSM has not covered, and an empty row of chips is worse
+     * than no row.
+     */
+    fun availableLands(): List<String> =
+        snapshot?.park?.let(ParkLands::landsIn).orEmpty()
 }
 
 @HiltViewModel(assistedFactory = ParkDetailViewModel.Factory::class)
@@ -109,6 +124,11 @@ class ParkDetailViewModel @AssistedInject constructor(
     fun selectTab(tab: ParkTab) = _state.update { it.copy(tab = tab) }
 
     fun selectSort(sort: RideSort) = _state.update { it.copy(sort = sort) }
+
+    /** Passing the land already selected clears it, so a second tap means "all lands". */
+    fun selectLand(land: String?) = _state.update {
+        it.copy(land = if (it.land == land) null else land)
+    }
 
     fun toggleHideClosed() = _state.update { it.copy(hideClosed = !it.hideClosed) }
 
@@ -174,6 +194,9 @@ fun ParkDetailUiState.visibleEntities(): List<ParkEntity> {
     }
     val filtered = all.filter { it.kind == kind }
         .filter { !hideClosed || it.isOperating }
+        // Land is a ride-list idea. Shows and restaurants are short enough lists to read
+        // whole, and their coordinates are patchier.
+        .filter { land == null || tab != ParkTab.RIDES || it.land() == land }
 
     return when {
         tab != ParkTab.RIDES -> filtered.sortedBy { it.name }

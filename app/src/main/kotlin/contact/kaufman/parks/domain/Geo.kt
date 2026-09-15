@@ -128,3 +128,15 @@ fun ParkEntity.distanceMetersFrom(latitude: Double, longitude: Double): Double? 
     val lon = this.longitude ?: return null
     return Geo.distanceMeters(latitude, longitude, lat, lon)
 }
+
+/**
+ * Which land this entity stands in, or null when it is in none of them.
+ *
+ * Null is common and expected — 7% of rides across the resorts, and most of Animal
+ * Kingdom's Discovery Island. It means "no land", never "unknown park".
+ */
+fun ParkEntity.land(): String? {
+    val lat = latitude ?: return null
+    val lon = longitude ?: return null
+    return ParkLands.landAt(park, lat, lon)
+}

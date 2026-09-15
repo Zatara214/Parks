@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -149,6 +150,28 @@ fun ParkDetailScreen(
                                     selected = state.sort == sort,
                                     onClick = { viewModel.selectSort(sort) },
                                     label = { Text(sort.label) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // A second row rather than more chips on the first: land names are long,
+                // and mixing "Fantasyland" in among "Wait" and "A-Z" reads as one
+                // undifferentiated pile of controls rather than two separate questions.
+                val lands = state.availableLands()
+                if (state.tab == ParkTab.RIDES && lands.isNotEmpty()) {
+                    item(key = "lands") {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            items(lands, key = { it }) { land ->
+                                FilterChip(
+                                    selected = state.land == land,
+                                    onClick = { viewModel.selectLand(land) },
+                                    label = { Text(land) },
                                 )
                             }
                         }
