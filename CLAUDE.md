@@ -71,12 +71,37 @@ adb exec-out screencap -p > /tmp/shot.png
 - Screenshot previews also exist via `./gradlew updateDebugScreenshotTest`.
 - Zak installs releases via Obtainium from GitHub Releases. He does not use ADB.
 
+## Keeping the stack current
+- `python3 tools/check-versions.py` compares every pin in `gradle/libs.versions.toml`
+  against what is actually published, and lists the Gradle wrapper and GitHub Actions pins
+  that live outside the catalogue. `--stale` hides what is already current. No Gradle
+  plugin and no build dependency, so it cannot break the build and works even when the
+  build is broken.
+- It prints **two** "latest" columns on purpose. Parks is deliberately on the Compose
+  **alpha** BOM, so a report that only knew about stable releases would tell you to
+  downgrade and lose every Expressive API.
+- The script **self-tests its own version ordering before reporting** (`--self-test` runs
+  just that). Worth keeping: ordering went wrong three separate ways while it was written —
+  a release candidate outranking its release, a suffix sorting higher merely by being
+  longer, and `0.8.0-0.6.x-compat` having its digits swallowed into the numeric prefix so
+  it beat plain `0.8.0`. Each case is pinned.
+- **The policy, decided 2026-09-15: take stable and release candidates; take an alpha only
+  when it buys something.** Compose qualifies — Material 3 Expressive exists nowhere else.
+  AGP, activity, datastore and lifecycle alphas do not: nothing in the app needs an API
+  that only exists there, and AGP alphas in particular churn. Re-checking is cheap now, so
+  adopting them on release is a small job rather than a standing risk.
+
 ## Toolchain (verified 2026-09-13)
 - AGP 9.x has built-in Kotlin: do NOT apply `org.jetbrains.kotlin.android`. Kotlin options
   go in a top-level `kotlin { compilerOptions { } }` block.
 - `compileSdk = 37` + `compileSdkMinor = 2`; `targetSdk = 37`, `minSdk = 31`.
 - **`compose-bom-alpha` 2026.09.00 resolves material3 to 1.5.0-alpha28**, the newest alpha.
   Do not also pin material3 by hand — the BOM already has it, and a second pin just drifts.
+  Confirmed by resolution, not by reading the comment (2026-09-15):
+  `./gradlew :app:dependencies --configuration debugRuntimeClasspath` shows
+  `material3:1.5.0-alpha28`. Transitive requests for 1.3.1 and 1.4.0 appear in that tree
+  but are *upgraded* by the BOM, which is what makes it look at a glance as though the app
+  is on 1.4.0 stable. It is not.
 - `MaterialExpressiveTheme`, `MotionScheme.expressive()`, `LargeFlexibleTopAppBar` and
   `LoadingIndicator` are all **public and working** at alpha28. (Grassfed's CLAUDE.md says
   they are internal; that note is stale — it was true of an earlier alpha.)
@@ -84,7 +109,8 @@ adb exec-out screencap -p > /tmp/shot.png
   (`android.experimental.enableScreenshotTest=true`) *and* the module's `android { }`
   block via `experimentalProperties[...]`. Setting only one fails configuration with a
   message telling you to set the other one.
-- kotlinx-datetime 0.7.1: `LocalDate.month.number` and `dayOfWeek.isoDayNumber` are
+- kotlinx-datetime 0.8.0 (bumped from 0.7.1 on 2026-09-15, no source changes needed):
+  `LocalDate.month.number` and `dayOfWeek.isoDayNumber` are
   **extensions** — they need `import kotlinx.datetime.number` / `.isoDayNumber` or you get
   "Unresolved reference on receiver of type 'Month'". `Instant` comes from `kotlin.time`,
   not `kotlinx.datetime` (that typealias is deprecated).
@@ -105,6 +131,16 @@ adb exec-out screencap -p > /tmp/shot.png
   `ui/<feature>/`, `di/`.
 - Hilt for DI (KSP, not kapt), Room for persistence, DataStore for settings, Ktor
   (OkHttp engine) + kotlinx.serialization for networking, Navigation 3 for navigation.
+- **That list is the whole list.** Five dependencies were declared and never used, and were
+  removed 2026-09-15: `androidx.work` and `androidx.hilt:hilt-work` (the app does no
+  background work at all — that is the point of it), `androidx.browser` (the hand-off uses
+  plain intents, not Custom Tabs), and both Coil artifacts (nothing displays a remote
+  image). `androidx.hilt:hilt-compiler` went too: it processes `@HiltWorker`, and Dagger's
+  own compiler handles `@HiltViewModel`. Verified at runtime, not just compiled — DI is the
+  kind of thing that fails on launch rather than in the build.
+- `material-icons-extended` **is** needed despite looking like bulk: most icons in use
+  (Thunderstorm, WbSunny, DirectionsCar, MyLocation, History, Grain) are not in the core
+  icon set, and R8 shrinks what is not referenced.
 - `ParksRepository` is the only place live data is assembled. It caches per-park snapshots
   in memory for 120s. **Nothing polls** — themeparks.wiki is volunteer-run, so every fetch
   is triggered by a screen or a pull-to-refresh.
