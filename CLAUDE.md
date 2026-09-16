@@ -199,6 +199,11 @@ Two traps already hit:
     restaurant, because `UNKNOWN` is not `OPERATING`
   - a row with `UNKNOWN` status draws **no badge**; it was drawing "Closed", which is a
     claim the app cannot support
+- **A fix in a Disney Springs car park resolves to Disney Springs, via the car-park
+  fallback in `Geo.parkAt`** — not via the boundary. Every one of its car parks is *outside*
+  the mapped boundary, Grapefruit and Strawberry by 213m and 201m, past the expansion
+  tolerance. Found on 2026-09-16 with Zak standing in it: the parking screen named the
+  garage while the dashboard would not say where he was.
 - Parking works normally: the three garages (Orange, Lime, Grapefruit) and four surface
   lots (Lemon, Mango, Strawberry, Watermelon) are in both `ParkingLots` and `ParkingAreas`,
   so the geofence fills the section in. Verified: a fix in the Orange Garage prefills it.
@@ -300,6 +305,13 @@ Two traps already hit:
   park" has to be an explicit answer rather than a gap between two polygons, and it is
   checked *before* the parks. `ParkBoundaries.at` returns the shape if you need to tell
   "CityWalk" from "nowhere"; `parkAt` collapses both to null.
+- **`Geo.parkAt` falls back to `ParkingAreas`**: a fix inside a park's own car park counts
+  as being at that park. This is what makes Disney Springs work, and it is a better signal
+  than a wider radius would be — a mapped car park is the actual place, whereas 250m of
+  tolerance starts swallowing hotels and Typhoon Lagoon. It also means the Magic Kingdom
+  TTC lots, two kilometres from the park, now report Magic Kingdom, which is the answer a
+  person would give. Universal's two garages carry a null park and so still refuse to
+  choose between Studios and Islands of Adventure; a test pins that.
 - `EXPANSION_TOLERANCE_METERS` (150m) absorbs a fix that has drifted past a fence and buys
   slack when a park grows before anyone regenerates. It applies **only when exactly one
   park is in range** — near the USF/IOA wall both qualify and the answer stays null, because
@@ -497,12 +509,18 @@ Two traps already hit:
   blanks on a flaky connection.
 
 ## The dashboard's chrome
-- **Parking is an extended FAB, not a card in the list.** It was a full-width card pinned
-  above every park, which meant an empty "Record your parking spot" prompt occupied the top
-  of the screen every day for a thing done once a visit. The button keeps its label in both
-  states — the icon alone is a car, which could as easily mean directions — and when a spot
-  is recorded the label becomes the spot, so the dashboard still answers "where is the car?"
-  at a glance. The park name is dropped there for width; the parking screen has it in full.
+- **Parking is an icon-only FAB, and the recorded spot lives in the title bar.** Two
+  revisions got here. It began as a full-width card pinned above every park, which meant an
+  empty "Record your parking spot" prompt occupied the top of the screen every day for a
+  thing done once a visit. Then it became an extended FAB labelled with the spot — which
+  put the answer in the bottom-right corner, floating over a park card. Zak's read, from a
+  night at Disney Springs: with a spot recorded, that is what he wants visible, and the
+  title bar is where the eye already goes.
+  So the FAB is purely the action, and `DashboardTopBar` shows the spot **right-aligned**
+  beside "Today" — right-aligned so a long row never shoves the title, with `widthIn` and
+  an ellipsis because the row is free text and can be any length. Lot and row only: the
+  park is already answered by the "Where you are" card, and repeating it is what made the
+  label too long to align in the first place.
 - The list carries **96dp of bottom content padding** so the last park card can scroll clear
   of the button rather than sitting under it forever.
 - **The top bar uses `enterAlwaysScrollBehavior`, and must not go back to

@@ -48,6 +48,20 @@ object Geo {
      */
     fun parkAt(latitude: Double, longitude: Double): Park? =
         ParkBoundaries.parkAt(latitude, longitude)
+            // Standing in a park's own car park counts as being at it. Found at Disney
+            // Springs on 2026-09-16, in the car park, where parking detection named the
+            // garage correctly while the dashboard refused to say where he was: **every**
+            // Disney Springs car park is outside its mapped boundary, and Grapefruit and
+            // Strawberry are 213m and 201m clear of it — past the expansion tolerance.
+            //
+            // Widening that tolerance was the wrong fix; at 250m it starts swallowing
+            // hotels and Typhoon Lagoon. A mapped car park is a much better signal than a
+            // radius, because it is the actual place rather than a guess at one.
+            //
+            // Universal's two garages are shared between Studios and Islands of Adventure
+            // and carry a null park, so they contribute nothing here and the honest
+            // "which of the two?" answer is preserved.
+            ?: ParkingAreas.at(latitude, longitude)?.park
 
     /**
      * Is a position inside a polygon?

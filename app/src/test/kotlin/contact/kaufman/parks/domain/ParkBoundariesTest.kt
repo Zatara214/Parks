@@ -121,6 +121,47 @@ class ParkBoundariesTest {
         assertNull(ParkBoundaries.parkAt(latitude, longitude))
     }
 
+    /**
+     * The Disney Springs bug, 2026-09-16. Every one of its car parks is outside its mapped
+     * boundary — Grapefruit by 213m, past the expansion tolerance — so the dashboard said
+     * nothing about where you were while the parking screen correctly named the garage.
+     * A fix in a park's own car park now resolves to that park.
+     */
+    @Test
+    fun `a fix in a park's own car park counts as being at that park`() {
+        for (area in ParkingAreas.all) {
+            val park = area.park ?: continue
+            val centre = area.ring.centre()
+            assertEquals(
+                "${area.osmName} does not resolve to ${park.displayName}",
+                park,
+                Geo.parkAt(centre.first, centre.second),
+            )
+        }
+    }
+
+    /**
+     * Universal's garages serve both parks, so they must stay silent rather than picking.
+     * This is the case the car-park fallback could most easily have broken.
+     */
+    @Test
+    fun `a Universal garage still refuses to name a park`() {
+        val garage = ParkingAreas.all.single { it.osmName == "Structure South" }
+        val centre = garage.ring.centre()
+        assertNull(Geo.parkAt(centre.first, centre.second))
+    }
+
+    private fun DoubleArray.centre(): Pair<Double, Double> {
+        var lat = 0.0
+        var lon = 0.0
+        for (i in indices step 2) {
+            lat += this[i]
+            lon += this[i + 1]
+        }
+        val points = size / 2
+        return lat / points to lon / points
+    }
+
     /** Shapes with no area, or a stray single point, would silently match nothing. */
     @Test
     fun `every ring is a usable polygon`() {

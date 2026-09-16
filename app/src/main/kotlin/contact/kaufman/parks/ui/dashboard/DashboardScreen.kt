@@ -84,10 +84,11 @@ fun DashboardScreen(
                 scrollBehavior = scrollBehavior,
                 onSettingsClick = onSettingsClick,
                 onTripsClick = onTripsClick,
+                parking = parking,
                 weather = { ResortWeatherStrip(state.resortWeather, temperatureUnit) },
             )
         },
-        floatingActionButton = { ParkingFab(parking, onParkingClick) },
+        floatingActionButton = { ParkingFab(onParkingClick) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
