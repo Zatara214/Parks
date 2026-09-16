@@ -264,7 +264,72 @@ place with the parts that do apply.
       screen on the Bazzite box — specifically whether per-attraction purchase ids match
       live entity ids, which decides whether the id match or the name backstop is doing
       the work.
-- [ ] Resorts, if it ever seems worth it.
+- [ ] Resorts — picked up 2026-09-16 and now has its own section below.
+
+### Resorts (Zak's pick 2026-09-16) — surveying first
+Picked as the next piece of work. Nothing is built yet, deliberately: this is the only item
+on the plan with **no verified data behind it**, and the failure mode for guessing is the
+quiet one. A hardcoded entity id that does not exist upstream does not error — the entry
+simply drops out, exactly as a stale park id drops a ride from the crowd average. Thirty
+invented hotel UUIDs would be thirty of those.
+
+So `tools/resort-survey.py` goes first, the same way the lands survey went before
+`ParkLands.kt`. Run it on the Bazzite box, where the network reaches themeparks.wiki:
+
+```
+python3 tools/resort-survey.py --dump /tmp/resort-dump
+```
+
+It is read-only, has no build dependency, and is gentle on a volunteer service — two
+destination lists plus at most three hotel probes, with a pause between requests.
+
+#### What "resorts" means here
+Worth settling before any code: **Zak is a local and does not stay in hotels.** A lodging
+feature — rates, availability, check-in — is for someone else's app entirely. What a local
+actually goes to a Disney resort for is **dining** (Ohana, Boma, Cítricos, Topolino's), the
+Christmas decorations, and the monorail loop. So the version worth building is *resorts as
+places you visit*, which is Disney Springs again rather than anything new: a name, a
+location, and what you can eat there.
+
+#### The insight that makes this cheap, if it holds
+`ParksRepository.refreshDiningDistrict` already downloads the **entire** Walt Disney World
+destination child list and keeps only the 38 entries inside the Disney Springs boundary.
+Everything else in that response is fetched today and thrown away. If resort restaurants
+are in there — and Disney Springs' were, filed under the destination rather than a park —
+then resort dining costs **no new request at all**, only a second filter. Question 4 of the
+survey measures exactly this.
+
+#### The naming collision, decided in advance
+`domain/Parks.kt` already has an enum called `Resort`, and it means Walt Disney World vs
+Universal Orlando — it drives weather fan-out, dashboard grouping and the official-app
+hand-off. Disney calls a hotel a "Resort" too, so the word is genuinely overloaded. In code
+the hotels will be **`ResortHotel`**; the existing `Resort` keeps its meaning untouched.
+The UI can still say "Resorts", because that is what the signs say.
+
+#### What each verdict implies
+- **Hotels present, with coordinates, and their `/children` returns restaurants** — the
+  good case. A resort screen is the Disney Springs screen with a different filter, and
+  `Geo.parkAt` can gain a "you're at the Contemporary" answer.
+- **Hotels present but no coordinates** — they can be listed and their dining shown, but
+  nothing location-shaped works. No detection, no parking prefill.
+- **Hotels present but `/children` is empty** — fall back to matching restaurants to hotels
+  by coordinate. Messier, and the survey reports how well it would work (how many stray
+  restaurants sit within 400 m of a hotel).
+- **No HOTEL entities at all** — then there is no resorts feature to be had from
+  themeparks.wiki, and the honest answer is to say so in this file and move on rather than
+  hand-tracing thirty hotels into a table nobody can regenerate.
+- `/live` and `/schedule` on a hotel are expected to be empty. If they are, a resort screen
+  shows no hours and no status, the same three blanks Disney Springs already carries — and
+  that is a known, acceptable shape rather than a surprise.
+
+#### Open, and only the survey answers them
+- Does either destination carry HOTEL entities at all?
+- Universal has ten-ish hotels and its `/live` omits restaurants entirely, so Universal
+  resorts may be a name and nothing else even if Disney's work.
+- Boundaries: park footprints are eight-metre polygons and the parking table is 316 points.
+  Thirty hotel outlines could be a large table for a small feature — worth measuring before
+  committing to polygons rather than a radius.
+
 
 ## Known nuances
 - A park can read "6 · Above average" while its sub-line says "About usual". These are two
