@@ -249,6 +249,36 @@ Two traps already hit:
   queues taper at close. That is real, not a bug, but it does mean the advice reads
   similarly across many rides on the same evening.
 
+## Lightning Lane pricing
+- The park `/schedule` carries a `purchases` array on each date row. `ParksRepository`
+  reads **today's rows only** — the schedule runs about 78 days ahead, and tomorrow's
+  price is not today's — and hands the snapshot a `List<LightningLaneOffer>`.
+  `ui/park/LightningLane.kt` draws them on the Rides tab.
+- **The card is for park-wide passes only** — Multi Pass, Premier Pass. A single ride's
+  price already arrives on the *live* feed as `PAID_RETURN_TIME` and `RideRow` has drawn
+  it since Phase 2 ("Paid LL 2:30 PM · $15"). Listing every ride here again would be a
+  second, staler answer to a question already answered on the row where it belongs, and
+  would bury the two passes that are the point under thirty rows.
+- **Per-attraction offers are excluded by matching the park's own attractions on id *or*
+  name**, never by reading upstream's `type`. The id is the better key, but the live and
+  schedule feeds are not documented to share an id scheme, and the failure mode — a card
+  listing thirty rides — looks enough like a working feature to ship unnoticed. Tests pin
+  both halves, including the case-insensitive name match.
+- A date carries several schedule rows (regular hours plus a hard-ticket night) and
+  upstream repeats the same pass on each, so offers are deduplicated **by name**: the name
+  is what is displayed, so a shared one is a visible duplicate whatever the ids say.
+- Three states, deliberately distinct. `available = false` draws "Sold out" and is **not**
+  hidden — that is what someone opened the card to find out. A price draws the price. Both
+  absent draws an em dash, never "Free".
+- Prices are the feed's own `formatted` string, shown verbatim. `amount` (cents) is kept
+  for ordering only. **This app does not do currency math.**
+- **Universal has no purchases at all** — Express Pass pricing is not in the feed — so the
+  card never draws at USF, Islands of Adventure or Epic Universe, the same way those ride
+  rows have no forecast to expand. Disney Springs has no schedule to read at all.
+- The footnote is not filler: Disney reprices these through the day, so a number read at
+  breakfast is not a promise at noon, and buying needs a logged-in account Parks
+  deliberately does not hold.
+
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides
   the chip unless there is a fix, so the control never exists in a state where it cannot

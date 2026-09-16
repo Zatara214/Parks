@@ -102,6 +102,10 @@ fun ParkDetailScreen(
             }
 
             val entities = state.visibleEntities()
+            // Derived here beside the visible list, the way the rest of this screen
+            // works out what it draws. It walks the park's attractions twice to sort the
+            // per-ride prices out of the park-wide passes.
+            val lightningLanePasses = state.snapshot?.lightningLanePackages.orEmpty()
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -181,6 +185,16 @@ fun ParkDetailScreen(
                                 )
                             }
                         }
+                    }
+                }
+
+                // Lightning Lane sits on the Rides tab because it answers a queue
+                // question, and the ride list is what you are looking at when you start
+                // asking it. Absent entirely at Universal, whose schedule carries no
+                // purchases at all.
+                if (state.tab == ParkTab.RIDES && lightningLanePasses.isNotEmpty()) {
+                    item(key = "lightning-lane") {
+                        LightningLaneCard(offers = lightningLanePasses, resort = park.resort)
                     }
                 }
 

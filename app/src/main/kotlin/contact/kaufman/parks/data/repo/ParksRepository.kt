@@ -10,6 +10,7 @@ import contact.kaufman.parks.data.crowd.CrowdBaselines
 import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.ForecastPoint
+import contact.kaufman.parks.domain.LightningLaneOffer
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkKind
@@ -101,9 +102,12 @@ class ParksRepository @Inject constructor(
         }
 
         val today = today()
-        val hours = schedule.getOrNull()?.schedule.orEmpty()
+        // Held as one list because two different things are read off it: the hours rows
+        // and the day's purchasable queue skips.
+        val todaysSchedule = schedule.getOrNull()?.schedule.orEmpty()
             .filter { it.date == today.toString() }
-            .map { it.toParkHours() }
+        val hours = todaysSchedule.map { it.toParkHours() }
+        val lightningLane = todaysSchedule.toLightningLaneOffers()
 
         runCatching { crowdBaselines.record(park, entities, today) }
             .onFailure { Log.w(TAG, "recording wait samples failed", it) }
@@ -120,6 +124,7 @@ class ParksRepository @Inject constructor(
             // Weather is sticky: once fetched it survives a data refresh rather than
             // being thrown away and re-requested.
             weather = existing?.weather,
+            lightningLane = lightningLane,
             fetchedAt = Clock.System.now(),
             error = null,
         ).also { snapshots[park] = it }
@@ -339,6 +344,33 @@ private fun LiveEntityDto.toParkEntity(park: Park, child: ChildEntityDto?): Park
         lastUpdated = lastUpdated.toInstantOrNull(),
     )
 }
+
+/**
+ * Today's purchasable queue skips — Disney's Lightning Lane passes.
+ *
+ * A single date can carry several schedule rows (regular hours plus a hard-ticket night),
+ * and upstream repeats the same pass on each of them, so the list is deduplicated by name.
+ * Name rather than id: the name is what is displayed, so two rows sharing one is a visible
+ * duplicate whatever their ids say.
+ *
+ * An entry with no name is dropped rather than rendered as a blank row with a price
+ * beside it. Universal sends no purchases at all, so this is empty there and the card
+ * never draws.
+ */
+private fun List<ScheduleEntryDto>.toLightningLaneOffers(): List<LightningLaneOffer> =
+    flatMap { it.purchases }
+        .mapNotNull { purchase ->
+            val name = purchase.name?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            LightningLaneOffer(
+                id = purchase.id,
+                name = name,
+                type = purchase.type,
+                available = purchase.available,
+                price = purchase.price?.formatted,
+                amountMinorUnits = purchase.price?.amount,
+            )
+        }
+        .distinctBy { it.name.lowercase() }
 
 private fun ScheduleEntryDto.toParkHours() = ParkHours(
     date = LocalDate.parse(date),

@@ -232,12 +232,38 @@ place with the parts that do apply.
 ### Phase 4 — nice to have
 - [ ] Home screen widget (Glance): current park crowd + parking spot.
 - [ ] Notify when a watched ride drops below a wait threshold.
-- [ ] **Lightning Lane pricing and availability** from the schedule `purchases` array.
-      Demoted from Phase 2 on 2026-09-15: Zak is a local and rarely buys them.
-      **Verified live that day**: Magic Kingdom's schedule carries purchases on 31 of 78
-      entries — per-attraction Single Pass with an `available` flag and a formatted price,
-      plus Multi Pass ($23) and Premier Pass ($299) packages. `PurchaseDto` is already
-      written and parsed and nothing reads it, so this is domain and UI work only.
+- [x] **Lightning Lane pricing and availability — done 2026-09-16.** A quiet reference
+      card on the Rides tab listing what it costs to skip the queues here today, from the
+      schedule's `purchases` array. Demoted from Phase 2 on 2026-09-15: Zak is a local and
+      rarely buys them, and the card is built to match — reference, not a call to action.
+
+      **The feature turned out to be half the size the note assumed**, in a useful way. The
+      note counted per-attraction Single Pass as work to do; it was already shipped. A
+      single ride's price arrives on the *live* feed as `PAID_RETURN_TIME`, and `RideRow`
+      has been drawing it ("Paid LL 2:30 PM · $15") since Phase 2. So the genuinely new
+      information in `purchases` is the **park-wide packages** — Multi Pass, Premier Pass —
+      which appeared nowhere in the app. The card shows those and nothing else: repeating
+      thirty rides would be a second, staler answer to a question already answered on the
+      row where it belongs, and would bury the two passes that are the point.
+
+      Excluding per-ride offers is done by matching the park's own attractions on **id or
+      name**, never on upstream's `type`. The id is the better key, but the live and
+      schedule feeds are not documented to share an id scheme, and the failure mode — a
+      card listing thirty rides — looks enough like a working feature to ship unnoticed.
+      Both halves are pinned by tests.
+
+      Sold out is shown rather than hidden (that is what you opened the card to find out),
+      prices are the feed's own `formatted` string with `amount` kept for ordering only,
+      and the card names both limits it cannot get around: Disney reprices through the day,
+      and buying needs an account Parks deliberately does not hold.
+
+      **One verification still owed.** The exact `purchases` shape was read live on
+      2026-09-15, but `api.themeparks.wiki` is unreachable from the Claude Code container
+      (egress policy), so the 2026-09-16 work was written against that reading and the
+      existing `PurchaseDto` rather than a fresh response. Worth one look at a real park
+      screen on the Bazzite box — specifically whether per-attraction purchase ids match
+      live entity ids, which decides whether the id match or the name backstop is doing
+      the work.
 - [ ] Resorts, if it ever seems worth it.
 
 ## Known nuances

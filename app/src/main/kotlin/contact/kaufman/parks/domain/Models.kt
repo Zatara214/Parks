@@ -48,6 +48,37 @@ data class ForecastPoint(
     val percentage: Int?,
 )
 
+/**
+ * One thing Disney sells today to skip a queue, read from the park schedule's
+ * `purchases` array.
+ *
+ * **Disney only.** Universal's schedule carries no purchases at all — Express Pass pricing
+ * simply is not in the feed — so this list is empty at USF, Islands of Adventure and Epic
+ * Universe, and the UI draws nothing rather than an empty card. Disney Springs has no
+ * schedule to read in the first place.
+ */
+data class LightningLaneOffer(
+    /** The entity this applies to, when upstream ties it to one attraction. */
+    val id: String?,
+    val name: String,
+    /**
+     * Upstream's own label, kept raw and deliberately not switched on.
+     *
+     * Whether an offer is park-wide is decided by [ParkSnapshot.lightningLanePackages]
+     * matching it against the park's own attractions, so a new or renamed type upstream
+     * cannot silently mis-file a pass into the wrong half of the screen.
+     */
+    val type: String?,
+    /** False is a real answer — "sold out for today" — and reads differently from null,
+     *  which is upstream declining to say. */
+    val available: Boolean?,
+    /** Upstream's formatted string, shown verbatim. Never recomputed from
+     *  [amountMinorUnits]: the feed knows its own currency and Parks does not do money. */
+    val price: String?,
+    /** Cents. Used for ordering only, never for display. */
+    val amountMinorUnits: Int?,
+)
+
 data class ParkEntity(
     val id: String,
     val name: String,
@@ -142,6 +173,7 @@ data class ParkSnapshot(
     val entities: List<ParkEntity> = emptyList(),
     val crowd: CrowdReading? = null,
     val weather: ParkWeather? = null,
+    val lightningLane: List<LightningLaneOffer> = emptyList(),
     val fetchedAt: Instant? = null,
     val error: String? = null,
 ) {
@@ -154,6 +186,33 @@ data class ParkSnapshot(
     /** The headline number on a park card: the longest posted standby right now. */
     val longestWait: ParkEntity?
         get() = openAttractions.filter { it.standbyMinutes != null }.maxByOrNull { it.standbyMinutes!! }
+
+    /**
+     * The passes sold for the park as a whole — Multi Pass, Premier Pass — cheapest first.
+     *
+     * This is the half that appears nowhere else in the app. A **single attraction's**
+     * price already arrives on the live feed as [Queue.PaidReturnTime] and is drawn on
+     * that ride's own row, fresher than the schedule's copy of it, so listing every ride
+     * here again would be a second, staler answer to a question already answered.
+     *
+     * Per-attraction offers are excluded by matching the park's own attractions on **id
+     * or name**, not by reading upstream's `type`. The id is the better key, but the two
+     * feeds are not documented to share an id scheme, and a name match is a cheap
+     * backstop: get this wrong and the card lists thirty rides instead of two passes,
+     * which is the kind of failure that looks like the feature working.
+     */
+    val lightningLanePackages: List<LightningLaneOffer>
+        get() {
+            val ids = attractions.mapTo(mutableSetOf()) { it.id }
+            val names = attractions.mapTo(mutableSetOf()) { it.name.lowercase() }
+            return lightningLane
+                .filterNot { offer ->
+                    (offer.id != null && offer.id in ids) || offer.name.lowercase() in names
+                }
+                // Cheapest first, and anything the feed priced as null sinks to the
+                // bottom rather than sorting as free.
+                .sortedBy { it.amountMinorUnits ?: Int.MAX_VALUE }
+        }
 
     val medianWait: Int?
         get() = openAttractions.mapNotNull { it.standbyMinutes }.sorted()
