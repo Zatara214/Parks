@@ -321,6 +321,10 @@ Two traps already hit:
   matching, since labelling the wrong restaurant is worse than labelling none. An empty
   list draws no label and no chip; the filter is also guarded on the designation existing,
   so it can never empty a tab whose chip is not drawn.
+- The list came from Disney's 2024 Quick-Service Dining Plan list, reconciled 2026-09-26 —
+  the full account, including why **Sanaa is deliberately absent** and how Refreshment Port
+  became La Poutinerie, is in the doc comment on `NAMES`. When refreshing it, keep Zak's
+  rule: an unrecognised name is checked for closure, never dropped for being missing.
 
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides

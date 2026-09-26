@@ -402,26 +402,33 @@ that. It also matters *how* the data would land in this repo:
    recommended: it is the literal "compiling a database" case, it puts Disney's descriptions
    into a public GPLv3 repo, and a price change would need a release to reach the phone.
 
-#### Quick service (Zak, 2026-09-26) — mechanism built, list pending
-Zak's source for which restaurants are quick service is Disney's Quick-Service Dining Plan
-list as published by Disney Food Blog on 2024-01-03. It is two years old, which matters
-in one direction only: restaurants do not switch service style, but they open and close.
-The rule he set: **a name on that list that Parks does not have is checked for closure
-before anything is done with it**, not dropped for merely being missing.
+#### Quick service (Zak, 2026-09-26) — done
+Zak's source is Disney's Quick-Service Dining Plan list as Disney Food Blog published it on
+2024-01-03, saved by Zak as HTML because the site is unreachable from the Claude Code
+container. His rule: restaurants do not change service style but do open and close, so a
+listed restaurant Parks does not recognise is **checked for closure before anything is
+done with it**, not dropped for merely being missing.
 
-Built: `domain/QuickService.kt` (the curated list and a name matcher that flattens
-ampersands, apostrophes, ™ and a leading "The", with no fuzzy matching), a "Quick service"
-label on restaurant rows, and a "Quick service" filter chip on the Dining tab. The list is
-**empty**, and empty draws nothing — no label, no chip.
+How that went, against the venues Disney's menu endpoint serves today:
+- **101 of 124** listed names matched a current venue outright.
+- **6 were renames or respellings**, not closures — Sleepy Hollow Refreshments is now
+  "Sleepy Hollow", Tangerine Cafe is Disney's "Tangierine", and so on.
+- **15 were missing and each was searched.** 14 are open; that venue list is hand-picked
+  and skips whole resorts, which is exactly why missing could not mean closed. **One
+  closed: Refreshment Port** (2026-01-12), reopened 2026-07-01 as **La Poutinerie**, still
+  quick service — so the replacement went in and the old name came out.
+- **Sanaa was left off on purpose**: quick service only at breakfast, table service at
+  lunch and dinner, and the label covers the whole restaurant. Zak can overrule.
+- Water parks were dropped (out of scope for Parks). **Resort names were kept** for when
+  resorts are built.
+- Worth knowing: the "does not change service style" assumption held for this list, but
+  not universally — Trail's End at Fort Wilderness went from a table-service buffet to
+  quick service. It was already listed as quick service, so nothing needed doing.
 
-Blocked on the list itself: disneyfoodblog.com, the Internet Archive and every site that
-republished the list are unreachable from the Claude Code container. It was deliberately
-**not** reconstructed from search-result snippets, which risk a plausible name that was
-never on the list. Next step: Zak pastes the article text, each name is checked against
-the venues Disney's menu endpoint answers for today, and anything missing is searched for
-closure news before the list is written.
-
-The same list covers resort quick service, for when resorts are built.
+Result: 121 names in `domain/QuickService.kt`, a "Quick service" label on those rows and a
+filter chip on the Dining tab. **Not yet checked against themeparks.wiki's own names**,
+which are what the app actually matches — expected to follow Disney's, since that is where
+themeparks.wiki gets them, but the first look at a real Dining tab confirms it.
 
 #### Solvable either way, noted for later
 - **Neither source says which restaurants are quick service.** It would need a small curated
