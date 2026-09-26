@@ -135,7 +135,7 @@ big lots are mapped unnamed, so a fix there still fills in the park. These are w
 to OSM upstream rather than hand-tracing into the app — the table is generated from a
 query, so an upstream fix flows straight in.
 
-### Phase 3 — trip history (active, Zak's pick 2026-09-15)
+### Phase 3 — trip history (local half done; Dawarich shelved 2026-09-26)
 What was ridden, and when. **Local storage is the default and must stay fully functional
 on its own**; Dawarich is an optional enrichment for the one person in a thousand who runs
 one, and the feature cannot depend on it.
@@ -207,11 +207,14 @@ reconstruct a real trip without becoming a tracker itself.
       One rule was reversed by testing: visits are **not** split on gaps. A three-hour
       threshold turned one realistic day at Magic Kingdom into three visits, and no
       threshold works, because the app cannot tell a pocket from a drive home.
-- [ ] Settings: optional Dawarich base URL and API key, off by default, with an explicit
-      "test connection" so a typo fails visibly rather than silently.
-- [ ] Dawarich client: one day, one park bbox, `slim=true`, paged.
-- [ ] Dwell detection, then the wait-sample cross-check for confidence.
-- [ ] Let it be wrong gracefully — everything editable or deletable by hand.
+
+**Shelved by Zak, 2026-09-26:** the Dawarich half does not matter for how he uses the app.
+The steps and the API research above are kept so nobody redoes them if it comes back.
+- Settings: optional Dawarich base URL and API key, off by default, with an explicit
+  "test connection" so a typo fails visibly rather than silently.
+- Dawarich client: one day, one park bbox, `slim=true`, paged.
+- Dwell detection, then the wait-sample cross-check for confidence.
+- Let it be wrong gracefully — everything editable or deletable by hand.
 
 ### Disney Springs (Zak's request, 2026-09-15) — first pass done
 Not a theme park and not on themeparks.wiki, but somewhere Zak goes often, so it earns a
@@ -230,7 +233,8 @@ place with the parts that do apply.
       show no badge rather than a wrong one.
 
 ### Phase 4 — nice to have
-- [ ] Home screen widget (Glance): current park crowd + parking spot.
+- Home screen widget (Glance): current park crowd + parking spot. **Shelved by Zak,
+  2026-09-26** — not something he expects to use.
 - [ ] Notify when a watched ride drops below a wait threshold.
 - [x] **Lightning Lane pricing and availability — done 2026-09-16.** A quiet reference
       card on the Rides tab listing what it costs to skip the queues here today, from the
@@ -330,6 +334,69 @@ The UI can still say "Resorts", because that is what the signs say.
   Thirty hotel outlines could be a large table for a small feature — worth measuring before
   committing to polygons rather than a radius.
 
+
+### Restaurant menus and prices (Zak's request, 2026-09-26) — researched, awaiting a decision
+Quick service first, since that is where Zak eats. Menus change on the scale of weeks, so
+this never needs to be live — a refresh every so often is plenty.
+
+#### What exists, checked 2026-09-26
+- **Disney has an unauthenticated JSON menu endpoint**, the one its own menu pages load:
+  `https://disneyworld.disney.go.com/dining/dinemenu/api/menu?searchTerm=<restaurant-slug>`.
+  No key, no login. It returns meal periods → groups → items, each with a title,
+  description and **pre-tax price**. Undocumented, so it can change without notice, and it
+  answers only a request that looks like a browser — a plain client gets an HTML bot
+  challenge instead of JSON.
+- **[scoopdisney/wdw-menu-watch](https://github.com/scoopdisney/wdw-menu-watch)** sweeps
+  that endpoint every three hours and commits the result as CSV. The 2026-09-26 snapshot:
+  **17,695 priced rows across 304 venues** — every park, Disney Springs, the water parks and
+  every resort hotel. Quick service is well covered: Cosmic Ray's 40 items, Pecos Bill 39,
+  Woody's Lunch Box 39, Satu'li 48, Sunshine Seasons 82. Split per area, Magic Kingdom's
+  file is 180 KB. **It has no licence file**, so by default nothing in it is licensed for
+  reuse, and it is a stranger's project with no promise to keep running.
+- **themeparks.wiki carries no menus at all.**
+- **Fan sites** — TouringPlans, AllEars, Thrill Data, The Mouse For Less, MagicDay, Theme
+  Park IQ — all publish menus with prices, and none offers an API. TouringPlans retired
+  theirs; Thrill Data answers 403 to any programmatic request (see the crowds note above).
+- **Universal: nothing clean found.** `universalorlando.com` has an official menu page per
+  restaurant (`/web/en/us/things-to-do/dining/<slug>/menu.html`), but no JSON endpoint and
+  no scraper or mirror turned up. Its menu pages could not be inspected from the Claude Code
+  container (egress policy). Universal's mobile order has menus, behind an account.
+
+#### The catch, stated plainly
+**Disney's Terms of Use prohibit automated access "for … compiling, building, creating or
+contributing to any collection of data, data set or database."** A menu table is precisely
+that. It also matters *how* the data would land in this repo:
+- **Prices and item names are facts** and not copyrightable in the US. **Descriptions are
+  Disney's written text** and are. Shipping them inside a public GPLv3 repo would publish
+  someone else's copyrighted text under a licence this project cannot grant.
+- Getting past the bot check means sending a fake browser identity. That is a small thing
+  technically, and it is also the definition of evading an access control.
+- Worth being honest about the precedent: the app already runs on themeparks.wiki, which
+  gets its Disney data from the same kind of undocumented endpoints. So Parks already sits
+  one step removed from exactly this. The difference is that it would be Parks, under
+  Zak's name, doing the scraping directly.
+
+#### The three shapes, and what each costs
+1. **On tap, on device, from Disney.** Opening a restaurant fetches its one menu, the same
+   request a browser makes on its menu page, and caches it for a week. Nothing polls,
+   nothing is redistributed, nothing lives in the repo — the pattern the rest of this app
+   already follows. Costs: a faked browser identity, and it breaks whenever Disney changes
+   the endpoint or tightens the bot check.
+2. **On tap, from the wdw-menu-watch CSV.** Parks never contacts Disney; it reads a
+   stranger's daily mirror and caches it for a week. Costs: unlicensed data, and a
+   dependency on a project that owes Parks nothing.
+3. **A generated table shipped in the APK**, the way the park boundaries are. Not
+   recommended: it is the literal "compiling a database" case, it puts Disney's descriptions
+   into a public GPLv3 repo, and a price change would need a release to reach the phone.
+
+#### Solvable either way, noted for later
+- **Neither source says which restaurants are quick service.** It would need a small curated
+  list, the same way `CrowdSeed` curates key attractions.
+- **Matching Disney's slugs to themeparks.wiki's restaurants.** `ChildEntityDto` already
+  carries a `slug`; whether it matches Disney's is unverified. A name match is the backstop,
+  as with Lightning Lane.
+- Prices are **before tax**, and the UI should say so rather than let a $14.99 burger ring
+  up at $16.
 
 ## Known nuances
 - A park can read "6 · Above average" while its sub-line says "About usual". These are two
