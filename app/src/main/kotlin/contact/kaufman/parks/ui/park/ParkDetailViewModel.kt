@@ -15,6 +15,7 @@ import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.ParkLands
 import contact.kaufman.parks.domain.ParkSnapshot
 import contact.kaufman.parks.domain.ParkWeather
+import contact.kaufman.parks.domain.QuickService
 import contact.kaufman.parks.domain.distanceMetersFrom
 import contact.kaufman.parks.domain.land
 import dagger.assisted.Assisted
@@ -64,7 +65,16 @@ data class ParkDetailUiState(
     val fix: InParkFix? = null,
     /** null means "every land" — the default, and the only option where none are mapped. */
     val land: String? = null,
+    val quickServiceOnly: Boolean = false,
 ) {
+    /**
+     * Whether any restaurant here is designated quick service. False draws no chip: at
+     * Universal, and anywhere the curated list has nothing, a "Quick service" filter could
+     * only ever empty the tab.
+     */
+    fun hasQuickService(): Boolean =
+        snapshot?.entities.orEmpty().any(QuickService::isQuickService)
+
     /**
      * Sorting by distance is only offered once there is a fix inside this park, so the
      * control never appears in a state where it cannot do anything. Nothing here asks for
@@ -154,6 +164,8 @@ class ParkDetailViewModel @AssistedInject constructor(
 
     fun toggleHideClosed() = _state.update { it.copy(hideClosed = !it.hideClosed) }
 
+    fun toggleQuickService() = _state.update { it.copy(quickServiceOnly = !it.quickServiceOnly) }
+
     /**
      * Weather is a tap, not a subscription. Zak has a dedicated weather app; this exists
      * for "is it about to rain on me in EPCOT", so it is never fetched automatically.
@@ -219,6 +231,9 @@ fun ParkDetailUiState.visibleEntities(): List<ParkEntity> {
         // Land is a ride-list idea. Shows and restaurants are short enough lists to read
         // whole, and their coordinates are patchier.
         .filter { land == null || tab != ParkTab.RIDES || it.land() == land }
+        // Guarded on the designation existing, not just the flag, so a filter left on can
+        // never empty a tab where the chip that would turn it off is not drawn.
+        .filter { !quickServiceOnly || tab != ParkTab.DINING || !hasQuickService() || QuickService.isQuickService(it) }
 
     return when {
         tab != ParkTab.RIDES -> filtered.sortedBy { it.name }

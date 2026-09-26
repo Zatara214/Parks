@@ -314,7 +314,13 @@ Two traps already hit:
   dishes. Prices are **before tax** and the screen says so. A missing price is blank, never
   $0.00. The title is the name Disney sent back, so a mis-resolved menu announces itself.
 - **Neither Disney's response nor themeparks.wiki says which restaurants are quick
-  service.** A quick-service filter would need a small curated list, like `CrowdSeed`.
+  service**, so `domain/QuickService.kt` is a curated list, like `CrowdSeed`. Its staleness
+  risk runs one way: a closed restaurant left on it is harmless, but a *new* quick-service
+  spot missing from it shows up unlabelled and the filter hides it. Names match after
+  flattening `&`/"and", apostrophes, ™ and a leading "The" — deliberately no fuzzy
+  matching, since labelling the wrong restaurant is worse than labelling none. An empty
+  list draws no label and no chip; the filter is also guarded on the designation existing,
+  so it can never empty a tab whose chip is not drawn.
 
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides

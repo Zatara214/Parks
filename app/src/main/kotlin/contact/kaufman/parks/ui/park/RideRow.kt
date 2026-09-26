@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import contact.kaufman.parks.domain.OperatingStatus
 import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.Queue
+import contact.kaufman.parks.domain.QuickService
 import contact.kaufman.parks.domain.WaitHistoryDay
 import contact.kaufman.parks.ui.components.formatWalkingDistance
 import contact.kaufman.parks.ui.components.toParkClockTime
@@ -220,6 +221,8 @@ private fun ParkEntity.secondaryLine(distanceMeters: Double? = null): String? {
         // First, because when the list is ordered by distance that is what the eye is
         // scanning for; the queue detail is still there behind it.
         distanceMeters?.let { add(formatWalkingDistance(it)) }
+        // A restaurant row otherwise has nothing under its name at all.
+        if (QuickService.isQuickService(this@secondaryLine)) add("Quick service")
         queues.forEach { queue ->
             when (queue) {
                 is Queue.SingleRider -> queue.waitMinutes?.let { add("Single rider $it min") }

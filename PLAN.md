@@ -402,6 +402,27 @@ that. It also matters *how* the data would land in this repo:
    recommended: it is the literal "compiling a database" case, it puts Disney's descriptions
    into a public GPLv3 repo, and a price change would need a release to reach the phone.
 
+#### Quick service (Zak, 2026-09-26) — mechanism built, list pending
+Zak's source for which restaurants are quick service is Disney's Quick-Service Dining Plan
+list as published by Disney Food Blog on 2024-01-03. It is two years old, which matters
+in one direction only: restaurants do not switch service style, but they open and close.
+The rule he set: **a name on that list that Parks does not have is checked for closure
+before anything is done with it**, not dropped for merely being missing.
+
+Built: `domain/QuickService.kt` (the curated list and a name matcher that flattens
+ampersands, apostrophes, ™ and a leading "The", with no fuzzy matching), a "Quick service"
+label on restaurant rows, and a "Quick service" filter chip on the Dining tab. The list is
+**empty**, and empty draws nothing — no label, no chip.
+
+Blocked on the list itself: disneyfoodblog.com, the Internet Archive and every site that
+republished the list are unreachable from the Claude Code container. It was deliberately
+**not** reconstructed from search-result snippets, which risk a plausible name that was
+never on the list. Next step: Zak pastes the article text, each name is checked against
+the venues Disney's menu endpoint answers for today, and anything missing is searched for
+closure news before the list is written.
+
+The same list covers resort quick service, for when resorts are built.
+
 #### Solvable either way, noted for later
 - **Neither source says which restaurants are quick service.** It would need a small curated
   list, the same way `CrowdSeed` curates key attractions.

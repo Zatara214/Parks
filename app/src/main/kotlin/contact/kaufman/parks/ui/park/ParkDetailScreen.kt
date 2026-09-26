@@ -157,6 +157,13 @@ fun ParkDetailScreen(
                                 label = { Text("Open only") },
                             )
                         }
+                        if (state.tab == ParkTab.DINING && state.hasQuickService()) {
+                            FilterChip(
+                                selected = state.quickServiceOnly,
+                                onClick = viewModel::toggleQuickService,
+                                label = { Text("Quick service") },
+                            )
+                        }
                         if (state.tab == ParkTab.RIDES) {
                             state.availableSorts().forEach { sort ->
                                 FilterChip(
@@ -292,6 +299,8 @@ private fun ParkSummary(state: ParkDetailUiState) {
 private fun emptyMessage(state: ParkDetailUiState): String = when {
     state.tab == ParkTab.DINING && state.snapshot?.park?.resort?.name?.startsWith("UNIVERSAL") == true ->
         "Universal doesn't publish live dining status."
+    state.tab == ParkTab.DINING && state.quickServiceOnly && state.hasQuickService() ->
+        "No quick service here right now. Turn off \"Quick service\" to see everything."
     state.hideClosed -> "Nothing open right now. Turn off \"Open only\" to see everything."
     else -> "No data for this park yet."
 }
