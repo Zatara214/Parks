@@ -279,6 +279,43 @@ Two traps already hit:
   breakfast is not a promise at noon, and buying needs a logged-in account Parks
   deliberately does not hold.
 
+## Restaurant menus
+- Walt Disney World only, Disney Springs included. Chosen 2026-09-26 over a third-party
+  mirror and over shipping a table — see PLAN.md, Restaurant menus, for the terms-of-use
+  and copyright reasoning. **Nothing in this repo contains menu content**, and nothing
+  should: the app fetches one restaurant's menu when someone opens it.
+- The endpoint is Disney's own, undocumented:
+  `disneyworld.disney.go.com/dining/dinemenu/api/menu?searchTerm=<slug>`. It answers only a
+  **browser User-Agent**; anything else gets a 200 carrying an HTML bot-check page, which
+  is why `DisneyMenuApi` treats a body starting with `<` as `Blocked`, not as a menu.
+- **The shared client identifies as Parks through Ktor's `UserAgent` plugin, and must not
+  go back to a `defaultRequest` header.** `defaultRequest` *appends* its value even when a
+  request sets its own, so the menu request went out as Chrome and Parks at once. The
+  plugin steps aside for a request that names itself. Found by a test, not in the field;
+  `MenuRepositoryTest` pins exactly one User-Agent.
+- **The slug is worked out from the name** (`domain/MenuSlugs.kt`) because nothing the app
+  holds carries it. Measured against 304 real pairs: rules resolve 77%, a 67-entry override
+  table the rest, **304/304, 262 on the first request**. Woody's Lunch Box (`woodys-lunchbox`)
+  is why the table exists. A wrong guess is a 404 and the next one is tried; at most four.
+- **Freshness is the point.** The phone's copy shows instantly, and if it is older than a
+  day (`MenuRepository.FRESH_FOR`) the whole response is replaced by what Disney says now —
+  swapped, never merged, so removed dishes disappear too. Pull-to-refresh asks immediately.
+  Nothing checks in the background; a menu nobody opens is never fetched.
+- The cache is **files in `cacheDir`, not Room** (`FileMenuStore`): no migration, and
+  Android clearing it costs one request. The raw body and the slug that worked are kept,
+  so a refresh asks the right address first.
+- Four outcomes, kept distinct: **Found**; **NoMenu** (every guess 404'd — remembered for a
+  day so reopening does not re-run them, and any old copy is deleted because it is no
+  longer true); **Blocked / network failure** (stop, keep the old copy on screen with a
+  line saying the check failed); and **unreadable** — a response that will not parse is a
+  failure, never "no menu", because Disney changing its format would otherwise read as
+  every restaurant quietly having no menu.
+- Allergy-friendly groups are dropped: Disney publishes them as a second copy of the same
+  dishes. Prices are **before tax** and the screen says so. A missing price is blank, never
+  $0.00. The title is the name Disney sent back, so a mis-resolved menu announces itself.
+- **Neither Disney's response nor themeparks.wiki says which restaurants are quick
+  service.** A quick-service filter would need a small curated list, like `CrowdSeed`.
+
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides
   the chip unless there is a fix, so the control never exists in a state where it cannot

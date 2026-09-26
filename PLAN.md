@@ -335,7 +335,20 @@ The UI can still say "Resorts", because that is what the signs say.
   committing to polygons rather than a radius.
 
 
-### Restaurant menus and prices (Zak's request, 2026-09-26) — researched, awaiting a decision
+### Restaurant menus and prices (Zak's request, 2026-09-26) — **built 2026-09-26, shape 1**
+**Zak chose shape 1** — on tap, on device, from Disney — for two reasons: the mirror is
+unlicensed and a stranger's to stop, and fetching on demand means nothing is
+redistributed. Disney's menu structure is unlikely to move often, so the requirement is
+that a menu *change* is picked up, which the one-day refresh does. See the Restaurant
+menus section of `CLAUDE.md` for how it works; the research below is why.
+
+**Verified here, not yet on a device.** The slug resolver, the response parsing, the cache
+and refresh rules, and the view model were compiled and run in the Claude Code container
+— 27 tests, plus the resolver against all 304 real restaurants. The Compose screen and
+its wiring need the real build, and **the endpoint itself has never been called from this
+app**: the container cannot reach Disney. The first real test is opening Cosmic Ray's on
+the phone.
+
 Quick service first, since that is where Zak eats. Menus change on the scale of weeks, so
 this never needs to be live — a refresh every so often is plenty.
 

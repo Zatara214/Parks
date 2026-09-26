@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +59,8 @@ fun RideRow(
     loadHistory: (suspend (String) -> List<WaitHistoryDay>)? = null,
     /** Metres from the viewer, when the list is ordered by distance. */
     distanceMeters: Double? = null,
+    /** Opens this entry's own screen — a Disney restaurant's menu. Null draws no tap target. */
+    onOpen: (() -> Unit)? = null,
 ) {
     var expanded by rememberSaveable(entity.id) { mutableStateOf(false) }
     var history by remember(entity.id) { mutableStateOf<List<WaitHistoryDay>>(emptyList()) }
@@ -80,7 +83,13 @@ fun RideRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (canExpand) Modifier.clickable { expanded = !expanded } else Modifier)
+                .then(
+                    when {
+                        canExpand -> Modifier.clickable { expanded = !expanded }
+                        onOpen != null -> Modifier.clickable(onClick = onOpen)
+                        else -> Modifier
+                    },
+                )
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -104,6 +113,15 @@ fun RideRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+            }
+
+            if (!canExpand && onOpen != null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Menu",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             if (canExpand) {

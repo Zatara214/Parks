@@ -19,6 +19,10 @@ borrows and from whom.
   every request is triggered by something on screen, and responses are cached.
 - **[Open-Meteo](https://open-meteo.com)** — weather forecasts, fetched on demand.
   Free for non-commercial use, no API key, no user tracking.
+- **Walt Disney World** — restaurant menus and prices are requested from the same
+  endpoint Disney's own menu pages load, one restaurant at a time when someone opens it,
+  and cached only on that device. No menu content is included in this repository or
+  redistributed by it. Menu text and descriptions remain Disney's.
 - **[OpenStreetMap](https://www.openstreetmap.org/copyright)** — two sets of shapes, both
   traced from OSM data in September 2026: the parking-lot outlines in
   `domain/ParkingAreas.kt` (simplified to roughly 5 metres) and the park and CityWalk

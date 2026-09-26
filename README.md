@@ -42,6 +42,9 @@ use it. A reading still resting on estimates says so.
 - **[themeparks.wiki](https://themeparks.wiki)** — wait times, hours, showtimes, dining.
   Volunteer-run, so Parks never polls it; data is fetched when a screen asks and cached.
 - **[Open-Meteo](https://open-meteo.com)** — weather, fetched on demand only.
+- **Walt Disney World's website** — a restaurant's menu and prices, fetched from Disney
+  only when you open that restaurant, then kept on your phone for a day. Nothing is
+  fetched in bulk and nothing is stored anywhere but the phone that asked.
 
 No accounts, no analytics, no ad SDKs, no telemetry. Everything you record — parking
 spots, wait history — stays on the device.

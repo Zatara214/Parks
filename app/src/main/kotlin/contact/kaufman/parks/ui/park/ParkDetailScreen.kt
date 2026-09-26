@@ -42,7 +42,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.domain.ParkEntity
 import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.Resort
 import contact.kaufman.parks.domain.distanceMetersFrom
@@ -57,6 +59,7 @@ fun ParkDetailScreen(
     onBack: () -> Unit,
     onParkingClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onRestaurantClick: (ParkEntity) -> Unit = {},
     viewModel: ParkDetailViewModel = hiltViewModel<ParkDetailViewModel, ParkDetailViewModel.Factory>(
         creationCallback = { factory -> factory.create(park) },
     ),
@@ -227,6 +230,15 @@ fun ParkDetailScreen(
                             distanceMeters = state.fix
                                 ?.takeIf { state.sort == RideSort.NEARBY }
                                 ?.let { entity.distanceMetersFrom(it.latitude, it.longitude) },
+                            // Menus come from Disney's own endpoint, so only Disney's
+                            // restaurants get one — Disney Springs included, Universal not.
+                            onOpen = if (entity.kind == EntityKind.RESTAURANT &&
+                                park.resort == Resort.WALT_DISNEY_WORLD
+                            ) {
+                                { onRestaurantClick(entity) }
+                            } else {
+                                null
+                            },
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
                     }

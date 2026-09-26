@@ -144,6 +144,7 @@ fun SettingsScreen(
                     // parking-lot outlines are ODbL and attribution has to reach the person
                     // using them, which a file in the repo alone does not.
                     text = "Park data from themeparks.wiki · Weather from Open-Meteo\n" +
+                        "Walt Disney World menus fetched from Disney's website when opened.\n" +
                         "Crowd levels follow the method published by WDW Passport.\n" +
                         "Parking lot outlines © OpenStreetMap contributors, ODbL.\n\n" +
                         "Not affiliated with The Walt Disney Company or NBCUniversal.",

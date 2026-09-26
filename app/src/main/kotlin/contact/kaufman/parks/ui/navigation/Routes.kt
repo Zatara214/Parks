@@ -21,3 +21,10 @@ data object AboutKey : NavKey
 
 @Serializable
 data object TripsKey : NavKey
+
+/**
+ * One restaurant's menu. The name travels with the id because it is what the app works
+ * Disney's menu address out from — see `MenuSlugs`.
+ */
+@Serializable
+data class MenuKey(val restaurantId: String, val name: String) : NavKey

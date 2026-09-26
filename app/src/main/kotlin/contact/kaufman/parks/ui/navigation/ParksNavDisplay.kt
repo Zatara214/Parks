@@ -17,6 +17,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.ui.dashboard.DashboardScreen
+import contact.kaufman.parks.ui.menu.MenuScreen
 import contact.kaufman.parks.ui.park.ParkDetailScreen
 import contact.kaufman.parks.ui.parking.ParkingScreen
 import contact.kaufman.parks.ui.settings.AboutScreen
@@ -79,6 +80,7 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
                         park = park,
                         onBack = { backStack.removeLastOrNull() },
                         onParkingClick = { push(ParkingKey(park.id)) },
+                        onRestaurantClick = { restaurant -> push(MenuKey(restaurant.id, restaurant.name)) },
                     )
                 }
             }
@@ -87,6 +89,9 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
                     initialPark = key.parkId?.let(Park::fromId),
                     onBack = { backStack.removeLastOrNull() },
                 )
+            }
+            entry<MenuKey> { key ->
+                MenuScreen(key = key, onBack = { backStack.removeLastOrNull() })
             }
             entry<TripsKey> {
                 TripsScreen(onBack = { backStack.removeLastOrNull() })
