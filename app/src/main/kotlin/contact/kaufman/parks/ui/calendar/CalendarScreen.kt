@@ -5,12 +5,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.WaterDrop
@@ -23,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -38,7 +42,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import contact.kaufman.parks.data.prefs.TemperatureUnit
+import contact.kaufman.parks.domain.AnnualPass
 import contact.kaufman.parks.domain.CalendarDay
+import contact.kaufman.parks.domain.PassBlockout
+import contact.kaufman.parks.domain.Resort
 import contact.kaufman.parks.domain.DayOutlook
 import contact.kaufman.parks.domain.ParkDay
 import contact.kaufman.parks.domain.ParkDayStatus
@@ -100,6 +107,29 @@ fun CalendarScreen(
                     }
                 }
 
+                // Only once Disney's pass calendar has actually been read: before that, a chip
+                // could only ever add nothing, which reads as "no blockouts" — a claim.
+                if (state.resort == Resort.WALT_DISNEY_WORLD && state.hasPassCalendar) {
+                    item(key = "passes") {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Show blockouts for",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(AnnualPass.entries, key = { it.name }) { pass ->
+                                    FilterChip(
+                                        selected = pass in state.chosenPasses,
+                                        onClick = { viewModel.togglePass(pass) },
+                                        label = { Text(pass.shortName) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (state.isLoading) {
                     item(key = "loading") {
                         Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
@@ -116,9 +146,15 @@ fun CalendarScreen(
                         )
                     }
                     item(key = "sources") {
+                        val passLine = if (state.resort == Resort.WALT_DISNEY_WORLD) {
+                            state.passNote?.let { " $it" }
+                                ?: " Blockouts and Good-to-Go days from Disney's pass calendar, checked weekly."
+                        } else {
+                            ""
+                        }
                         Text(
                             text = "Hours from themeparks.wiki, as each park publishes them. Weather from " +
-                                "Open-Meteo — past about a week it is an outlook, not a forecast.",
+                                "Open-Meteo — past about a week it is an outlook, not a forecast." + passLine,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -142,13 +178,51 @@ private fun DayCard(day: CalendarDay, heading: String, unit: TemperatureUnit) {
                     text = heading,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
                 )
+                if (day.goodToGo) GoodToGoBadge(Modifier.padding(start = 8.dp))
+                Spacer(Modifier.weight(1f))
                 day.weather?.let { WeatherSummary(it, unit) }
             }
+            // Blockouts sit above the hours: "can my friend come?" is the first question.
+            day.blockouts.forEach { BlockoutLine(it) }
             day.parks.forEach { ParkLine(it) }
         }
     }
+}
+
+/** No park reservation needed today for passholders. */
+@Composable
+private fun GoodToGoBadge(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Text(
+            text = "Good-to-Go",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
+}
+
+/**
+ * "Pixie Dust · blocked out", or "Pirate · blocked at Magic Kingdom". Drawn in the error
+ * color on purpose: unlike a busy park, a blockout is a hard no at the gate.
+ */
+@Composable
+private fun BlockoutLine(blockout: PassBlockout) {
+    val where = if (blockout.isEveryPark) {
+        "blocked out"
+    } else {
+        "blocked at " + blockout.parks.sortedBy { it.ordinal }.joinToString(", ") { it.displayName }
+    }
+    Text(
+        text = "${blockout.pass.shortName} · $where",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.error,
+    )
 }
 
 /** High / low, the day's shape, and the rain chance — the three numbers that decide a day. */

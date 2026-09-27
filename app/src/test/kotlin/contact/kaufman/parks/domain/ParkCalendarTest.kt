@@ -95,4 +95,56 @@ class ParkCalendarTest {
         assertNull(days[1].weather)
         assertEquals(Park.MAGIC_KINGDOM, days[0].parks.single().park)
     }
+
+    // Annual Pass blockouts and Good-to-Go days.
+
+    private val nextDay = LocalDate(2026, 10, 3)
+
+    private val passes = PassCalendar(
+        blockouts = mapOf(
+            AnnualPass.PIXIE_DUST to mapOf(
+                day to PassBlockout.DISNEY_THEME_PARKS,
+                nextDay to PassBlockout.DISNEY_THEME_PARKS,
+            ),
+            AnnualPass.PIRATE to mapOf(day to setOf(Park.MAGIC_KINGDOM)),
+        ),
+        goodToGo = setOf(nextDay),
+        fetchedAt = at(0),
+    )
+
+    @Test
+    fun `only the chosen passes' blockouts appear, in the order chosen`() {
+        val chosen = listOf(AnnualPass.PIRATE, AnnualPass.PIXIE_DUST, AnnualPass.INCREDI)
+        val blockouts = ParkCalendar.blockoutsOn(day, passes, chosen)
+        assertEquals(listOf(AnnualPass.PIRATE, AnnualPass.PIXIE_DUST), blockouts.map { it.pass })
+    }
+
+    /** "Blocked at Magic Kingdom" and "blocked out" are different answers to a friend. */
+    @Test
+    fun `a single-park blockout is told apart from a whole-resort one`() {
+        val blockouts = ParkCalendar.blockoutsOn(day, passes, listOf(AnnualPass.PIRATE, AnnualPass.PIXIE_DUST))
+        assertEquals(false, blockouts[0].isEveryPark)
+        assertEquals(setOf(Park.MAGIC_KINGDOM), blockouts[0].parks)
+        assertEquals(true, blockouts[1].isEveryPark)
+    }
+
+    /** The Incredi-Pass has no blockouts; choosing it must add nothing to any day. */
+    @Test
+    fun `a pass with no blockouts adds nothing`() {
+        assertTrue(ParkCalendar.blockoutsOn(day, passes, listOf(AnnualPass.INCREDI)).isEmpty())
+    }
+
+    @Test
+    fun `Good-to-Go days are marked, whatever passes are chosen`() {
+        val days = ParkCalendar.build(listOf(day, nextDay), emptyMap(), emptyList(), passes, emptyList())
+        assertEquals(listOf(false, true), days.map { it.goodToGo })
+    }
+
+    /** No pass calendar read — nothing claimed either way. */
+    @Test
+    fun `without a pass calendar nothing is marked`() {
+        val days = ParkCalendar.build(listOf(nextDay), emptyMap(), emptyList(), null, listOf(AnnualPass.PIXIE_DUST))
+        assertEquals(false, days.single().goodToGo)
+        assertTrue(days.single().blockouts.isEmpty())
+    }
 }

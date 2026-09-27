@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import contact.kaufman.parks.domain.AnnualPass
 import contact.kaufman.parks.domain.Park
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,11 @@ data class Settings(
     val temperatureUnit: TemperatureUnit = TemperatureUnit.FAHRENHEIT,
     /** Parks the dashboard hides. Empty means show all seven. */
     val hiddenParks: Set<Park> = emptySet(),
+    /**
+     * Whose blockouts the calendar shows. Several at once, because the usual question is
+     * whether a friend on a different pass can come too. Empty shows only Good-to-Go days.
+     */
+    val calendarPasses: Set<AnnualPass> = emptySet(),
 ) {
     fun visibleParks(): List<Park> = Park.entries.filterNot { it in hiddenParks }
 }
@@ -51,6 +57,10 @@ class SettingsStore @Inject constructor(
             // dropping it silently is right, since the alternative is a crash on launch.
             hiddenParks = prefs[HIDDEN_PARKS].orEmpty()
                 .mapNotNull { name -> Park.entries.firstOrNull { it.name == name } }
+                .toSet(),
+            // Same rule as hidden parks: a pass Disney retires drops out quietly.
+            calendarPasses = prefs[CALENDAR_PASSES].orEmpty()
+                .mapNotNull { name -> AnnualPass.entries.firstOrNull { it.name == name } }
                 .toSet(),
         )
     }
@@ -78,10 +88,19 @@ class SettingsStore @Inject constructor(
         }
     }
 
+    suspend fun setCalendarPass(pass: AnnualPass, shown: Boolean) {
+        context.dataStore.edit { prefs ->
+            val passes = prefs[CALENDAR_PASSES].orEmpty().toMutableSet()
+            if (shown) passes.add(pass.name) else passes.remove(pass.name)
+            prefs[CALENDAR_PASSES] = passes
+        }
+    }
+
     private companion object {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val TEMPERATURE_UNIT = stringPreferencesKey("temperature_unit")
         val HIDDEN_PARKS = stringSetPreferencesKey("hidden_parks")
+        val CALENDAR_PASSES = stringSetPreferencesKey("calendar_passes")
     }
 }

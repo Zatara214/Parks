@@ -482,6 +482,36 @@ parks respected. Reached from a calendar button on the dashboard's top bar.
 - **Lightning Lane prices by date** — already in hand: `purchases` sits on every schedule
   row, not just today's. A cheap addition to each day.
 
+#### Annual Pass blockouts and Good-to-Go (Zak, 2026-09-27) — built, waiting on one survey
+Zak holds a **Disney Incredi-Pass** (no blockouts at all) and a **Universal Premier Pass**
+(also no theme-park blockouts). So the value is in **friends' passes**: the calendar lets
+any of the four Disney passes be chosen at once, and each chosen pass that is blocked on a
+day gets a line on that day — "Pixie Dust · blocked out", "Pirate · blocked at Magic
+Kingdom". The choice is saved. Good-to-Go days get a badge.
+
+**The source**: `disneyworld.disney.go.com/passes/blockout-dates/api/get-calendars/?months=13`,
+found in a search engine's index — the feed behind Disney's public per-pass calendar pages,
+13 months, every pass in one response. Disney's own help pages say Good-to-Go days show on
+that same passholder calendar, so one request should answer both. Same posture as menus:
+Disney's endpoint, a browser identity, only when someone opens the calendar.
+
+**Weekly, Zak's rhythm, without background work.** He asked for a check every week or two,
+since Good-to-Go days arrive in batches. The app does no background work at all, so the
+week is enforced on open instead: the phone's copy is used until it is seven days old, and
+the next calendar open after that asks Disney again. Pull-to-refresh asks immediately.
+
+**What is left: the feed's shape.** Its address is known, its response is not — the Claude
+Code container cannot reach Disney. `DisneyPassCalendarReader` therefore reads nothing and
+the calendar says "Can't read Disney's pass calendar yet" rather than showing a calendar
+with no blockouts, which would tell every friend they are free. Everything else — the
+choice of passes, the weekly cache, the badges and lines, failure handling — is built and
+tested against a stand-in reader.
+
+**Next step, no Bazzite needed:** run `python3 tools/pass-calendar-survey.py` on the Mac
+and paste its output. It makes two plain requests and prints a structural summary short
+enough to paste. The reader is written from that, and it also shows whether the
+reservation-availability feed is worth a later feature.
+
 #### Out of reach
 - **Your own reservations and pass details** — behind a Disney login, which this app will
   not hold.

@@ -346,8 +346,21 @@ Two traps already hit:
 - The outlook is **one Open-Meteo request per resort** (`WeatherApi.dailyOutlook`, daily
   fields only), cached three hours, last good copy kept on failure. Ten days, not sixteen:
   past a week it is an outlook, and the footer says so.
-- Blockout dates, Good-to-Go days and reservation availability are **not** shown yet — see
-  PLAN.md, Calendar, for what each would take.
+- **Annual Pass blockouts and Good-to-Go days** come from Disney's pass calendar feed
+  (`data/passes/`), one request covering all four passes. Any number of passes can be
+  chosen — the point is friends' passes; Zak's Incredi-Pass has no blockouts — and the
+  choice is persisted in `Settings.calendarPasses`. A chosen pass that is *not* blocked
+  draws nothing: silence means "you're fine". Blockouts use the error color on purpose;
+  unlike a busy park, a blockout is a hard no at the gate.
+- **Weekly, on open** (`PassCalendarRepository.FRESH_FOR`), never in the background: Zak
+  asked for a check every week or two because Good-to-Go days land in batches. An
+  unreadable copy gets the same week's grace, so it is not refetched on every open.
+- **`DisneyPassCalendarReader` reads nothing yet, deliberately** — the feed's shape has not
+  been seen. Until it has, the calendar says it cannot read the pass calendar and draws no
+  pass chips. Never let it fall back to "no blockouts": that tells a friend they can come.
+  Write it from the output of `tools/pass-calendar-survey.py`.
+- Every request to Disney's website goes through `data/disney/getFromDisney`, the single
+  place the browser User-Agent lives. Menus and the pass calendar both use it.
 
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides

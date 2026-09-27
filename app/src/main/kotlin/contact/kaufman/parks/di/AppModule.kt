@@ -11,6 +11,10 @@ import contact.kaufman.parks.data.db.ParksDatabase
 import contact.kaufman.parks.data.db.WaitSampleDao
 import contact.kaufman.parks.data.menu.FileMenuStore
 import contact.kaufman.parks.data.menu.MenuStore
+import contact.kaufman.parks.data.passes.DisneyPassCalendarReader
+import contact.kaufman.parks.data.passes.FilePassCalendarStore
+import contact.kaufman.parks.data.passes.PassCalendarReader
+import contact.kaufman.parks.data.passes.PassCalendarStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -80,4 +84,6 @@ object AppModule {
 
     /** Menus cache as files, not in Room — see [FileMenuStore] for why. */
     @Provides fun menuStore(store: FileMenuStore): MenuStore = store
+    @Provides fun passCalendarStore(store: FilePassCalendarStore): PassCalendarStore = store
+    @Provides fun passCalendarReader(reader: DisneyPassCalendarReader): PassCalendarReader = reader
 }

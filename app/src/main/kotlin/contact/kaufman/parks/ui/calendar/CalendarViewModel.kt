@@ -2,12 +2,18 @@ package contact.kaufman.parks.ui.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import contact.kaufman.parks.data.passes.PassCalendarRepository
+import contact.kaufman.parks.data.passes.PassCalendarResult
 import contact.kaufman.parks.data.prefs.SettingsStore
 import contact.kaufman.parks.data.prefs.TemperatureUnit
 import contact.kaufman.parks.data.repo.ParksRepository
+import contact.kaufman.parks.domain.AnnualPass
 import contact.kaufman.parks.domain.CalendarDay
+import contact.kaufman.parks.domain.DayOutlook
+import contact.kaufman.parks.domain.PassCalendar
 import contact.kaufman.parks.domain.Park
 import contact.kaufman.parks.domain.ParkCalendar
+import contact.kaufman.parks.domain.ParkHours
 import contact.kaufman.parks.domain.ParkKind
 import contact.kaufman.parks.domain.Resort
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +43,13 @@ data class CalendarUiState(
     val days: List<CalendarDay> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    /** Whose blockouts to show. Persisted, so a friend's pass stays chosen between visits. */
+    val chosenPasses: Set<AnnualPass> = emptySet(),
+    /** Whether Disney's pass calendar was read. False draws no pass chips: a control that
+     *  could only ever show nothing is worse than no control. */
+    val hasPassCalendar: Boolean = false,
+    /** Why blockouts and Good-to-Go days are missing or may be out of date, if they are. */
+    val passNote: String? = null,
 )
 
 /**
@@ -50,6 +63,7 @@ data class CalendarUiState(
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val repository: ParksRepository,
+    private val passCalendars: PassCalendarRepository,
     private val settings: SettingsStore,
 ) : ViewModel() {
 
@@ -62,13 +76,22 @@ class CalendarViewModel @Inject constructor(
 
     private var loading: Job? = null
 
+    /** The last inputs, so choosing a pass redraws the days without asking anyone again. */
+    private var dates: List<LocalDate> = emptyList()
+    private var schedules: Map<Park, List<ParkHours>?> = emptyMap()
+    private var outlook: List<DayOutlook> = emptyList()
+    private var passCalendar: PassCalendar? = null
+
     init {
         viewModelScope.launch {
             // The same parks the dashboard shows. Someone who has hidden Epic Universe does
             // not want its hours on every day of the calendar either.
             val resorts = parksShown().map { it.resort }.distinct()
             val start = if (Resort.WALT_DISNEY_WORLD in resorts) Resort.WALT_DISNEY_WORLD else resorts.firstOrNull()
-            _state.update { it.copy(resorts = resorts, resort = start ?: Resort.WALT_DISNEY_WORLD) }
+            val chosen = settings.settings.first().calendarPasses
+            _state.update {
+                it.copy(resorts = resorts, resort = start ?: Resort.WALT_DISNEY_WORLD, chosenPasses = chosen)
+            }
             load(force = false)
         }
     }
@@ -77,6 +100,13 @@ class CalendarViewModel @Inject constructor(
         if (resort == _state.value.resort) return
         _state.update { it.copy(resort = resort, days = emptyList(), isLoading = true) }
         load(force = false)
+    }
+
+    /** Adds or removes a pass. One pass calendar covers every pass, so this costs nothing. */
+    fun togglePass(pass: AnnualPass) {
+        val chosen = _state.value.chosenPasses.let { if (pass in it) it - pass else it + pass }
+        _state.update { it.copy(chosenPasses = chosen, days = rebuild(chosen)) }
+        viewModelScope.launch { settings.setCalendarPass(pass, pass in chosen) }
     }
 
     /** Pull-to-refresh: ask for fresh hours and weather rather than the recent copies. */
@@ -92,23 +122,45 @@ class CalendarViewModel @Inject constructor(
             val today = repository.today()
             val dates = (0 until DAYS).map { today.plus(it, DateTimeUnit.DAY) }
 
-            val (schedules, outlook) = coroutineScope {
+            val (loadedSchedules, loadedOutlook, passes) = coroutineScope {
                 val schedules = parks.map { park -> async { park to repository.schedule(park, force) } }
                 val outlook = async { repository.outlook(resort, force) }
-                schedules.awaitAll().toMap() to outlook.await()
+                // Disney's pass calendar is a Walt Disney World thing; Universal's passes are
+                // not in it, and Zak's Universal pass has no theme-park blockouts anyway.
+                val passes = if (resort == Resort.WALT_DISNEY_WORLD) async { passCalendars.calendar(force) } else null
+                Triple(schedules.awaitAll().toMap(), outlook.await(), passes?.await())
             }
 
             if (_state.value.resort != resort) return@launch
+            this@CalendarViewModel.dates = dates
+            schedules = loadedSchedules
+            outlook = loadedOutlook
+            passCalendar = (passes as? PassCalendarResult.Loaded)?.calendar
             _state.update {
                 it.copy(
                     today = today,
-                    days = ParkCalendar.build(dates, schedules, outlook),
+                    days = rebuild(it.chosenPasses),
                     isLoading = false,
                     isRefreshing = false,
+                    hasPassCalendar = passCalendar != null,
+                    passNote = when (passes) {
+                        is PassCalendarResult.Loaded -> passes.refreshNote
+                        is PassCalendarResult.Unavailable -> passes.message
+                        null -> null
+                    },
                 )
             }
         }
     }
+
+    private fun rebuild(chosen: Set<AnnualPass>): List<CalendarDay> = ParkCalendar.build(
+        dates = dates,
+        schedules = schedules,
+        outlook = outlook,
+        passes = passCalendar,
+        // Always in the same order, whatever order they were tapped in.
+        chosenPasses = AnnualPass.entries.filter { it in chosen },
+    )
 
     /** Theme parks only: Disney Springs publishes no hours to put on a calendar. */
     private suspend fun parksShown(): List<Park> =

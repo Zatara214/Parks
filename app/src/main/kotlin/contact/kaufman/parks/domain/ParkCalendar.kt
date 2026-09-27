@@ -57,6 +57,11 @@ data class CalendarDay(
     val date: LocalDate,
     val weather: DayOutlook?,
     val parks: List<ParkDay>,
+    /** No park reservation needed for Annual Passholders. Walt Disney World only. */
+    val goodToGo: Boolean = false,
+    /** The chosen passes that are blocked on this day, in the order they were chosen.
+     *  A chosen pass that is not blocked is simply absent — silence means "you're fine". */
+    val blockouts: List<PassBlockout> = emptyList(),
 )
 
 /**
@@ -72,6 +77,8 @@ object ParkCalendar {
         dates: List<LocalDate>,
         schedules: Map<Park, List<ParkHours>?>,
         outlook: List<DayOutlook>,
+        passes: PassCalendar? = null,
+        chosenPasses: List<AnnualPass> = emptyList(),
     ): List<CalendarDay> {
         val weatherByDate = outlook.associateBy { it.date }
         return dates.map { date ->
@@ -79,9 +86,19 @@ object ParkCalendar {
                 date = date,
                 weather = weatherByDate[date],
                 parks = schedules.map { (park, rows) -> parkDay(park, date, rows) },
+                goodToGo = passes != null && date in passes.goodToGo,
+                blockouts = passes?.let { blockoutsOn(date, it, chosenPasses) }.orEmpty(),
             )
         }
     }
+
+    /** Which of [chosen] are blocked on [date], and where. */
+    fun blockoutsOn(date: LocalDate, calendar: PassCalendar, chosen: List<AnnualPass>): List<PassBlockout> =
+        chosen.mapNotNull { pass ->
+            calendar.blockouts[pass]?.get(date)
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { parks -> PassBlockout(pass, parks) }
+        }
 
     /** [rows] is the park's whole published schedule, or null when it could not be loaded. */
     fun parkDay(park: Park, date: LocalDate, rows: List<ParkHours>?): ParkDay {
