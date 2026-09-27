@@ -30,6 +30,21 @@ class WeatherApi @Inject constructor(
             parameter("timezone", "America/New_York")
             parameter("forecast_days", 2)
         }.body()
+
+    /**
+     * Daily highs, lows, rain chance and conditions for the days ahead, and nothing else —
+     * the calendar's outlook. Kept apart from [forecast] so the park screen's hourly detail
+     * does not grow to ten days of hours it never shows.
+     */
+    suspend fun dailyOutlook(latitude: Double, longitude: Double, days: Int): WeatherResponse =
+        client.get("https://api.open-meteo.com/v1/forecast") {
+            parameter("latitude", latitude)
+            parameter("longitude", longitude)
+            parameter("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code")
+            parameter("temperature_unit", "fahrenheit")
+            parameter("timezone", "America/New_York")
+            parameter("forecast_days", days)
+        }.body()
 }
 
 @Serializable

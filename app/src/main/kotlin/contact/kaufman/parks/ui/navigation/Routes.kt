@@ -22,6 +22,9 @@ data object AboutKey : NavKey
 @Serializable
 data object TripsKey : NavKey
 
+@Serializable
+data object CalendarKey : NavKey
+
 /**
  * One restaurant's menu. The name travels with the id because it is what the app works
  * Disney's menu address out from — see `MenuSlugs`.

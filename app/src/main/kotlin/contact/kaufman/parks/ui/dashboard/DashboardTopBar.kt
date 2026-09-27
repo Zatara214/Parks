@@ -2,6 +2,7 @@ package contact.kaufman.parks.ui.dashboard
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ fun DashboardTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onSettingsClick: () -> Unit,
     onTripsClick: () -> Unit,
+    onCalendarClick: () -> Unit,
     parking: ParkingRecordEntity?,
     weather: @Composable () -> Unit,
 ) {
@@ -67,6 +69,9 @@ fun DashboardTopBar(
         actions = {
             // Trip history is a feature rather than a setting, so it gets its own action
             // instead of being buried a level down next to the licence list.
+            IconButton(onClick = onCalendarClick) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Calendar")
+            }
             IconButton(onClick = onTripsClick) {
                 Icon(Icons.Default.History, contentDescription = "Trips")
             }

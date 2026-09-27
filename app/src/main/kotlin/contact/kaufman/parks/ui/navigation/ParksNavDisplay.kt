@@ -16,6 +16,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import contact.kaufman.parks.domain.Park
+import contact.kaufman.parks.ui.calendar.CalendarScreen
 import contact.kaufman.parks.ui.dashboard.DashboardScreen
 import contact.kaufman.parks.ui.menu.MenuScreen
 import contact.kaufman.parks.ui.park.ParkDetailScreen
@@ -67,6 +68,7 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
                     onParkingClick = { push(ParkingKey(null)) },
                     onSettingsClick = { push(SettingsKey) },
                     onTripsClick = { push(TripsKey) },
+                    onCalendarClick = { push(CalendarKey) },
                 )
             }
             entry<ParkDetailKey> { key ->
@@ -92,6 +94,9 @@ fun ParksNavDisplay(modifier: Modifier = Modifier) {
             }
             entry<MenuKey> { key ->
                 MenuScreen(key = key, onBack = { backStack.removeLastOrNull() })
+            }
+            entry<CalendarKey> {
+                CalendarScreen(onBack = { backStack.removeLastOrNull() })
             }
             entry<TripsKey> {
                 TripsScreen(onBack = { backStack.removeLastOrNull() })

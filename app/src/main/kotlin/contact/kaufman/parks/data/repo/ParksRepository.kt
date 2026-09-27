@@ -7,6 +7,7 @@ import contact.kaufman.parks.data.api.ScheduleEntryDto
 import contact.kaufman.parks.data.api.ThemeParksApi
 import contact.kaufman.parks.data.api.WeatherApi
 import contact.kaufman.parks.data.crowd.CrowdBaselines
+import contact.kaufman.parks.domain.DayOutlook
 import contact.kaufman.parks.domain.EntityKind
 import contact.kaufman.parks.domain.Geo
 import contact.kaufman.parks.domain.ForecastPoint
@@ -53,6 +54,11 @@ class ParksRepository @Inject constructor(
     private val snapshots = mutableMapOf<Park, ParkSnapshot>()
     private val weatherCache = mutableMapOf<String, ParkWeather>()
     private val childrenCache = mutableMapOf<Park, List<ChildEntityDto>>()
+
+    /** Each park's whole published schedule — weeks ahead, not just today — and when it
+     *  was read. The calendar is built from this. */
+    private val scheduleCache = mutableMapOf<Park, Pair<Instant, List<ParkHours>>>()
+    private val outlookCache = mutableMapOf<Resort, Pair<Instant, List<DayOutlook>>>()
 
     /** Disney Springs' restaurants live under the resort-wide entity, not a park's. */
     private var destinationChildrenCache: List<ChildEntityDto>? = null
@@ -102,6 +108,11 @@ class ParksRepository @Inject constructor(
         }
 
         val today = today()
+        // The whole response is kept for the calendar — it is weeks of hours that used to be
+        // fetched on every refresh and thrown away after today's rows were read.
+        schedule.getOrNull()?.let { response ->
+            scheduleCache[park] = Clock.System.now() to response.schedule.mapNotNull { it.toParkHoursOrNull() }
+        }
         // Held as one list because two different things are read off it: the hours rows
         // and the day's purchasable queue skips.
         val todaysSchedule = schedule.getOrNull()?.schedule.orEmpty()
@@ -176,6 +187,56 @@ class ParksRepository @Inject constructor(
             .onFailure { Log.w(TAG, "destination children fetch failed", it) }
             .getOrDefault(emptyList())
             .also { if (it.isNotEmpty()) destinationChildrenCache = it }
+    }
+
+    /**
+     * A park's published schedule, weeks ahead — or null if it has never been readable.
+     *
+     * Served from what the last refresh already fetched when that is recent, so opening the
+     * calendar after the dashboard costs nothing. A failed fetch returns the last good copy
+     * rather than null: hours published an hour ago are still the hours.
+     */
+    suspend fun schedule(park: Park, force: Boolean = false): List<ParkHours>? {
+        if (park.kind == ParkKind.DINING_DISTRICT) return null // no themeparks.wiki entity
+        val cached = scheduleCache[park]
+        if (!force && cached != null &&
+            (Clock.System.now() - cached.first).inWholeSeconds < SCHEDULE_FRESH_FOR_SECONDS
+        ) return cached.second
+
+        return runCatching { api.schedule(park.id).schedule.mapNotNull { it.toParkHoursOrNull() } }
+            .onSuccess { scheduleCache[park] = Clock.System.now() to it }
+            .onFailure { Log.w(TAG, "schedule fetch failed for ${park.displayName}", it) }
+            .getOrNull() ?: cached?.second
+    }
+
+    /**
+     * The resort's daily weather outlook for the calendar: one request per resort, the same
+     * as the dashboard's reading, cached for a few hours because a daily forecast does not
+     * move faster than that.
+     */
+    suspend fun outlook(resort: Resort, force: Boolean = false): List<DayOutlook> {
+        val cached = outlookCache[resort]
+        if (!force && cached != null &&
+            (Clock.System.now() - cached.first).inWholeSeconds < OUTLOOK_FRESH_FOR_SECONDS
+        ) return cached.second
+
+        val (latitude, longitude) = Geo.resortCenter(resort)
+        val daily = runCatching { weatherApi.dailyOutlook(latitude, longitude, OUTLOOK_DAYS).daily }
+            .onFailure { Log.w(TAG, "weather outlook failed for ${resort.displayName}", it) }
+            .getOrNull() ?: return cached?.second.orEmpty()
+
+        val days = daily.time.indices.mapNotNull { i ->
+            val date = runCatching { LocalDate.parse(daily.time[i]) }.getOrNull() ?: return@mapNotNull null
+            DayOutlook(
+                date = date,
+                highF = daily.high.getOrNull(i),
+                lowF = daily.low.getOrNull(i),
+                rainChancePercent = daily.precipitationProbabilityMax.getOrNull(i),
+                weatherCode = daily.weatherCode.getOrNull(i),
+            )
+        }
+        outlookCache[resort] = Clock.System.now() to days
+        return days
     }
 
     suspend fun refreshAll(force: Boolean = false): List<ParkSnapshot> = coroutineScope {
@@ -280,6 +341,16 @@ class ParksRepository @Inject constructor(
          *  free for non-commercial use — worth not abusing. */
         const val WEATHER_FRESH_FOR_SECONDS = 900L
 
+        /** Park schedules move on the scale of days — a new hard-ticket night, an Early
+         *  Entry change — so an hour-old copy is as good as a fresh one. */
+        const val SCHEDULE_FRESH_FOR_SECONDS = 3_600L
+
+        const val OUTLOOK_FRESH_FOR_SECONDS = 3L * 3_600L
+
+        /** Ten days, the length of the calendar. Open-Meteo offers sixteen, but past ten a
+         *  daily forecast for Orlando is mostly the climate average wearing a date. */
+        const val OUTLOOK_DAYS = 10
+
 
     }
 }
@@ -371,6 +442,9 @@ private fun List<ScheduleEntryDto>.toLightningLaneOffers(): List<LightningLaneOf
             )
         }
         .distinctBy { it.name.lowercase() }
+
+/** For the calendar's weeks of rows: one malformed date must not lose the rest. */
+private fun ScheduleEntryDto.toParkHoursOrNull(): ParkHours? = runCatching { toParkHours() }.getOrNull()
 
 private fun ScheduleEntryDto.toParkHours() = ParkHours(
     date = LocalDate.parse(date),

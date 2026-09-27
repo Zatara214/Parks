@@ -326,6 +326,29 @@ Two traps already hit:
   became La Poutinerie, is in the doc comment on `NAMES`. When refreshing it, keep Zak's
   rule: an unrecognised name is checked for closure, never dropped for being missing.
 
+## Calendar
+- `ui/calendar/`, from the dashboard's top bar. Ten days: per park, the day's hours, its
+  extra sessions and ticketed nights; per day, the resort's weather. Resort chips only when
+  both resorts have a visible park; hidden parks stay hidden; Disney Springs is left out
+  (no hours exist).
+- **The schedule is the one the dashboard already fetches.** `ParksRepository.refresh`
+  now keeps the whole `/schedule` response in `scheduleCache` instead of reading today and
+  discarding weeks of rows. `schedule(park)` serves it for an hour, refetches after, and
+  returns the last good copy if a refetch fails.
+- **Past the last published date is `NOT_YET_PUBLISHED`, never `CLOSED`.** Schedules are
+  published weeks ahead, not forever; reading the gap as closed would end every calendar in
+  a wall of "Closed". Pinned by `ParkCalendarTest`.
+- **Extra sessions are named by the feed's description, else by timing** — before the day
+  opens is Early Entry (Disney) / Early Park Admission (Universal), after it closes is
+  Extended Evening. Not by upstream's `type`: Walt Disney World's collector is closed source
+  and its extra-hours labels could not be verified. Ticketed nights are drawn in tertiary,
+  because they are the ones a ticket or pass does not cover.
+- The outlook is **one Open-Meteo request per resort** (`WeatherApi.dailyOutlook`, daily
+  fields only), cached three hours, last good copy kept on failure. Ten days, not sixteen:
+  past a week it is an outlook, and the footer says so.
+- Blockout dates, Good-to-Go days and reservation availability are **not** shown yet — see
+  PLAN.md, Calendar, for what each would take.
+
 ## Nearest ride
 - A third `RideSort.NEARBY` on the Rides tab. `ParkDetailUiState.availableSorts()` hides
   the chip unless there is a fix, so the control never exists in a state where it cannot

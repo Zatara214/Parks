@@ -1,6 +1,7 @@
 package contact.kaufman.parks.ui.components
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
@@ -32,6 +33,18 @@ fun LocalDate.toParkDateHeading(): String {
     val weekday = dayOfWeek.name.titleCase()
     val monthName = month.name.titleCase()
     return "$weekday, $monthName $day"
+}
+
+/**
+ * "Today", "Tomorrow", then "Wed, Sep 30" — how a person names the days of the coming week.
+ */
+fun LocalDate.toCalendarHeading(today: LocalDate): String {
+    val days = today.daysUntil(this)
+    return when (days) {
+        0 -> "Today"
+        1 -> "Tomorrow"
+        else -> "${dayOfWeek.name.titleCase().take(3)}, ${month.name.titleCase().take(3)} $day"
+    }
 }
 
 /** MONDAY -> Monday. The enum names arrive shouting. */

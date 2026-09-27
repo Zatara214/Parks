@@ -44,6 +44,7 @@ fun DashboardScreen(
     onParkingClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onTripsClick: () -> Unit,
+    onCalendarClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
@@ -84,6 +85,7 @@ fun DashboardScreen(
                 scrollBehavior = scrollBehavior,
                 onSettingsClick = onSettingsClick,
                 onTripsClick = onTripsClick,
+                onCalendarClick = onCalendarClick,
                 parking = parking,
                 weather = { ResortWeatherStrip(state.resortWeather, temperatureUnit) },
             )

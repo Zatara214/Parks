@@ -439,6 +439,58 @@ themeparks.wiki gets them, but the first look at a real Dining tab confirms it.
 - Prices are **before tax**, and the UI should say so rather than let a $14.99 burger ring
   up at $16.
 
+### Calendar (Zak's request, 2026-09-27) — first slice built
+The passholder's most-used screen in Disney's app, rebuilt around what Parks can honestly
+know: a **ten-day calendar** with each park's hours, its Early Entry / Extended Evening /
+Early Park Admission, ticketed nights by name, and the day's weather — per resort, hidden
+parks respected. Reached from a calendar button on the dashboard's top bar.
+
+#### What it can show, and how that was established
+- **Park hours weeks ahead** — themeparks.wiki's `/schedule`, the response the dashboard
+  already fetched on every refresh and threw away after reading today. Now kept, so opening
+  the calendar after the dashboard costs no schedule requests at all.
+- **Universal, read from the collector's source** (ThemeParks/parksapi, 2026-09-26):
+  regular hours; Early Park Admission as its own `EXTRA_HOURS` row; Halloween Horror Nights
+  and other ticketed nights as named `TICKETED_EVENT` rows; an event's early access as a
+  separate `INFO` row. It requests **190 days** ahead.
+- **Walt Disney World's collector is not open source** — the repository lists it "out of
+  scope", and the legacy engine fetched it from a hosted server too. So its labels for Early
+  Entry and Extended Evening could not be checked. The calendar therefore names extra
+  sessions by the feed's own description when there is one, and otherwise by **timing**
+  against the day's hours, which the app can see for itself. Hard-ticket nights arrive named
+  (already relied on by the dashboard). Horizon: 78 schedule rows for Magic Kingdom on
+  2026-09-15 — several weeks; the real number shows on the first run.
+- **Weather**: Open-Meteo's daily forecast, ten days, one request per resort, cached three
+  hours. It offers sixteen; past about a week a daily forecast for Orlando is mostly the
+  climate average, and the screen says so.
+
+#### What it cannot show yet, and what each would take
+- **Annual Pass blockout dates — public, not yet read.** Disney shows them without a login
+  (reservations → View Current Availability → Annual Pass → pass type), backed by an
+  undocumented endpoint, `disneyworld.disney.go.com/availability-calendar/api/calendar`
+  with a `passholder` segment and a date range. Same posture as menus: Disney's own
+  endpoint, unreachable from the Claude Code container, so **its response shape is
+  unverified**. Needs a pass-type setting.
+- **Good-to-Go days — public, rolling.** Disney adds them in batches (four more in
+  September 2026), so a hand-kept list would be stale within weeks: this is live data or
+  nothing. Disney has a per-pass calendar page (`/passes/calendar/<pass>/`) and an FAQ page
+  listing them; whether either is backed by readable data is unverified.
+- **Park reservation availability** comes from the same availability endpoint, and is the
+  thing that matters on a day that is *not* Good-to-Go.
+- **Universal Annual Pass blockouts** are fixed and published once a year, so they suit a
+  small curated table, like `ParkingLots`. Only worth it if Zak holds a Universal pass.
+- **Lightning Lane prices by date** — already in hand: `purchases` sits on every schedule
+  row, not just today's. A cheap addition to each day.
+
+#### Out of reach
+- **Your own reservations and pass details** — behind a Disney login, which this app will
+  not hold.
+- **EPCOT festivals and passholder events** (previews, AP nights) — not in any schedule
+  feed. Festival dates are published yearly and could be curated; AP events are news.
+- **Disney Springs hours** — nothing publishes them where the app can read them.
+- **A crowd forecast for future days** — the crowd model measures, it does not predict.
+  Projecting it forward would only restate the seasonal curve, which is not information.
+
 ## Known nuances
 - A park can read "6 · Above average" while its sub-line says "About usual". These are two
   different aggregations: the 1-10 level is the mean of the *ride ranks* (the WDW Passport
